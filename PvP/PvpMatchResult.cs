@@ -27,6 +27,13 @@ public sealed class PvpPlayerResult
 
 public class PvpMatchResult
 {
+    internal static bool IsValidPlacement(PvpMode mode, int? placement) => mode switch
+    {
+        PvpMode.Frontline => placement is >= 1 and <= 3,
+        PvpMode.CrystallineConflict or PvpMode.RivalWings => placement is 1 or 2,
+        _ => false
+    };
+
     public string MatchId { get; set; } = string.Empty;
     public DateTime DutyStartTime { get; set; }
     public PvpMode Mode { get; set; }

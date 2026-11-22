@@ -36,12 +36,7 @@ public partial class MainWindow
     }
 
     private static bool HasPvpResult(PlayerEncounter encounter) => encounter.Record.DutyType == "PvP" &&
-        (DutyClassification.Mode(encounter.Record) switch
-        {
-            PvpMode.Frontline => encounter.Player.PvPPlacement is >= 1 and <= 3,
-            PvpMode.CrystallineConflict or PvpMode.RivalWings => encounter.Player.PvPPlacement is 1 or 2,
-            _ => false
-        });
+        PvpMatchResult.IsValidPlacement(DutyClassification.Mode(encounter.Record), encounter.Player.PvPPlacement);
 
     private static PvpStatistics BuildPvpStatistics(IEnumerable<PlayerEncounter> encounters)
     {

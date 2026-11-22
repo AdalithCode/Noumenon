@@ -337,12 +337,7 @@ namespace MentorRouletteTracker.PvP
             }
 
             var recorderResult = result.Players.GetValueOrDefault(recorderKey);
-            var confirmedResult = result.Mode switch
-            {
-                PvpMode.Frontline => recorderResult?.Placement is >= 1 and <= 3,
-                PvpMode.CrystallineConflict or PvpMode.RivalWings => recorderResult?.Placement is 1 or 2,
-                _ => false
-            };
+            var confirmedResult = PvpMatchResult.IsValidPlacement(result.Mode, recorderResult?.Placement);
             if (!record.Completed && confirmedResult &&
                 !string.IsNullOrWhiteSpace(record.RecorderName) && !string.IsNullOrWhiteSpace(record.RecorderWorld) &&
                 result.RecorderName == record.RecorderName && result.RecorderWorld == record.RecorderWorld &&
