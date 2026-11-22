@@ -17,6 +17,8 @@ namespace MentorRouletteTracker.DutyTracking
         public List<PartyMemberSnapshot> Party { get; set; } = new();
         public List<DeathTimestamp> DeathTimestamps { get; set; } = new();
         public bool DeathTimestampsRecorded { get; set; }
+        public List<DutyPull> Pulls { get; set; } = new();
+        public bool PullsRecorded { get; set; }
         public string Note { get; set; } = string.Empty;
         public int? PvPDeaths { get; set; }
         public bool? PvPRosterComplete { get; set; }
@@ -27,5 +29,18 @@ namespace MentorRouletteTracker.DutyTracking
         public bool PvPResultsComplete { get; set; }
         public bool PvPExtendedStatsComplete { get; set; }
         public bool PvPLookupFinished { get; set; }
+
+        internal DutyPull? ActivePull => Pulls.LastOrDefault() is { Ended: null } pull ? pull : null;
+
+        internal void ClosePull(TimeSpan elapsed, DutyPullOutcome outcome)
+        {
+            var pull = ActivePull;
+            if (pull == null) return;
+            var end = elapsed < TimeSpan.Zero ? TimeSpan.Zero : elapsed;
+            if (pull.Started is { } start && end < start) end = start;
+            foreach (var death in DeathTimestamps.Where(death => death.PullNumber == pull.Number))
+                if (end < death.Elapsed) end = death.Elapsed;
+            Pulls[^1] = pull with { Ended = end, Outcome = outcome };
+        }
     }
 }

@@ -61,7 +61,7 @@ Unload Noumenon before replacing the history database with a backup.
 
 ## Schema
 
-New databases create schema 14 directly:
+New databases create schema 15 directly:
 
 - `duty_runs`: duty records, including the pending duty and its checkpoint.
 - `duty_players`: party snapshots in their recorded order.
@@ -84,6 +84,20 @@ duty resumes, later observed deaths can be added, but the details still explain
 that timestamps weren't recorded from the start. Backups and recovery copies
 include both the timeline and its flag.
 
+PvE pulls are stored in `pve_pulls_json`, with their number, duty-relative start/end,
+and outcome. A missing start means recording began after combat was already underway
+or only the wipe was observed. `pve_pulls_recorded` marks new PvE duties; older
+timestamps keep a null pull number and appear as unassigned.
+
+A pull follows observed combat, including dungeon trash. Three seconds of quiet
+combat flags closes it at the first quiet observation; a brief flag drop or local
+death won't split it. Wipes sample deaths before closing the pull. Death signals
+arriving within five seconds of that wipe can stay with it until a new pull starts.
+Reset and duty completion also close open pulls. Reloads and disconnects close an
+open pull at the last saved checkpoint as interrupted. Combat already underway on
+return gets an unknown start rather than an assumed link to the earlier pull.
+Pending duties restored from a backup keep their pull history as interrupted too.
+
 `pvp_roster_complete` tracks whether a new PvP scoreboard roster was fully imported.
 False imports can resume after reload while automatic lookup is still active. `pvp_combat_stats_complete` records whether
 the full source scoreboard also supplied teams, damage, kills, and assists. Previously
@@ -105,8 +119,8 @@ lookup before they stop.
 
 ## Database upgrades
 
-Schemas 6 through 13 upgrade to schema 14. Before upgrading, the plugin saves a
-complete backup under `backups/history-before-v14-*.sqlite`. If the backup fails,
+Schemas 6 through 14 upgrade to schema 15. Before upgrading, the plugin saves a
+complete backup under `backups/history-before-v15-*.sqlite`. If the backup fails,
 the upgrade stops.
 
 Upgrades keep existing records, IDs, player order, and the write revision. They add

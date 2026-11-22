@@ -222,6 +222,8 @@ public partial class MainWindow
                 return Error("Use hh:mm:ss for time in duty, with no negative values.");
             if (draft.DeathTimestamps.Any(death => death.Elapsed > duration))
                 return Error("Time in duty can't end before a recorded death timestamp.");
+            if (draft.Pulls.Any(pull => pull.Started > duration || pull.Ended > duration))
+                return Error("Time in duty can't end before a recorded pull.");
             draft.TimeInDuty = duration;
         }
         if (EditShows("players") && draft.Party.Any(p => string.IsNullOrWhiteSpace(p.Name)))

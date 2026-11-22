@@ -4,7 +4,7 @@ namespace MentorRouletteTracker.Storage
 {
     public sealed partial class SqliteHistoryStore
     {
-        public const int CurrentSchemaVersion = 14;
+        public const int CurrentSchemaVersion = 15;
         private const int ApplicationId = 0x44555459;
 
         public string DatabasePath { get; }
@@ -31,7 +31,7 @@ namespace MentorRouletteTracker.Storage
 
             var applicationId = ReadInteger(connection, null, "PRAGMA application_id;");
             var version = ReadInteger(connection, null, "PRAGMA user_version;");
-            if (applicationId == ApplicationId && version is 6 or 7 or 8 or 9 or 10 or 11 or 12 or 13)
+            if (applicationId == ApplicationId && version is 6 or 7 or 8 or 9 or 10 or 11 or 12 or 13 or 14)
                 BackupBeforeUpgrade(connection);
 
             using (var transaction = connection.BeginTransaction())
@@ -50,7 +50,7 @@ namespace MentorRouletteTracker.Storage
                 }
                 else
                 {
-                    if (applicationId != ApplicationId || version is not (6 or 7 or 8 or 9 or 10 or 11 or 12 or 13 or CurrentSchemaVersion))
+                    if (applicationId != ApplicationId || version is not (6 or 7 or 8 or 9 or 10 or 11 or 12 or 13 or 14 or CurrentSchemaVersion))
                         throw new InvalidDataException("The history database version is not supported.");
 
                     if (version is 6 or 7)
@@ -143,6 +143,18 @@ namespace MentorRouletteTracker.Storage
                     migration.ExecuteNonQuery();
                 }
 
+                if (version is 6 or 7 or 8 or 9 or 10 or 11 or 12 or 13 or 14)
+                {
+                    using var migration = connection.CreateCommand();
+                    migration.Transaction = transaction;
+                    migration.CommandText = """
+                        ALTER TABLE duty_runs ADD COLUMN pve_pulls_recorded INTEGER NOT NULL DEFAULT 0 CHECK (pve_pulls_recorded IN (0, 1));
+                        ALTER TABLE duty_runs ADD COLUMN pve_pulls_json TEXT NOT NULL DEFAULT '[]' CHECK (json_valid(pve_pulls_json));
+                        PRAGMA user_version = 15;
+                        """;
+                    migration.ExecuteNonQuery();
+                }
+
                 var tableCount = ReadInteger(connection, transaction, """
                     SELECT COUNT(*) FROM sqlite_master
                     WHERE type='table' AND name IN ('duty_runs','duty_players','history_state');
@@ -209,6 +221,8 @@ namespace MentorRouletteTracker.Storage
                 pvp_lookup_finished INTEGER NOT NULL DEFAULT 0 CHECK (pvp_lookup_finished IN (0, 1)),
                 pve_death_timestamps_recorded INTEGER NOT NULL DEFAULT 0 CHECK (pve_death_timestamps_recorded IN (0, 1)),
                 pve_deaths_json TEXT NOT NULL DEFAULT '[]' CHECK (json_valid(pve_deaths_json)),
+                pve_pulls_recorded INTEGER NOT NULL DEFAULT 0 CHECK (pve_pulls_recorded IN (0, 1)),
+                pve_pulls_json TEXT NOT NULL DEFAULT '[]' CHECK (json_valid(pve_pulls_json)),
                 is_pending INTEGER NOT NULL DEFAULT 0 CHECK (is_pending IN (0, 1)),
                 checkpoint_utc TEXT,
                 CHECK (is_pending = 0 OR completed = 0)

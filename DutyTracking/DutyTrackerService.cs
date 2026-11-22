@@ -9,7 +9,7 @@ using Lumina.Excel.Sheets;
 
 namespace MentorRouletteTracker.DutyTracking
 {
-    public class DutyTrackerService : IDisposable
+    public partial class DutyTrackerService : IDisposable
     {
         private readonly IClientState clientState;
         private readonly IDutyState dutyState;
@@ -83,6 +83,7 @@ namespace MentorRouletteTracker.DutyTracking
             this.clientState.TerritoryChanged += OnTerritoryChanged;
             this.dutyState.DutyStarted += OnDutyStarted;
             this.dutyState.DutyWiped += OnDutyWiped;
+            this.dutyState.DutyRecommenced += OnDutyRecommenced;
             this.dutyState.DutyCompleted += OnDutyCompleted;
             this.framework.Update += OnFrameworkUpdate;
             pendingRestoreNeeded = config.StorageAvailable && config.History.PendingDuty != null;
@@ -167,8 +168,10 @@ namespace MentorRouletteTracker.DutyTracking
         {
             if (current != null)
             {
+                PrepareWipedPull();
                 CaptureResetDeaths();
                 current.WipeCount++;
+                FinishWipedPull();
             }
         }
 
@@ -194,6 +197,7 @@ namespace MentorRouletteTracker.DutyTracking
                 pendingRestoreNeeded = false;
                 currentStartedThisSession = false;
                 recordCurrentNpcDuty = config.RecordNpcDuties;
+                InterruptPullAtCheckpoint();
             }
             if (current != null && deathTrackingTerritory == clientState.TerritoryType && CanCheckDutyState() &&
                 IsExcludedMode(readDutyMode(clientState.TerritoryType), recordCurrentNpcDuty))
@@ -215,7 +219,10 @@ namespace MentorRouletteTracker.DutyTracking
                 {
                     territoryCheckNeeded = true;
                     if (!clientState.IsLoggedIn)
+                    {
                         previousDeathStates.Clear();
+                        InterruptPullAtCheckpoint();
+                    }
                     else
                         CaptureResetDeaths();
                 }
@@ -277,6 +284,7 @@ namespace MentorRouletteTracker.DutyTracking
                 nextPvpPlayerRefresh = now + PvpPlayerRefreshInterval;
                 CaptureNearbyPvpPlayers();
             }
+            UpdatePullState();
             UpdateDeathStates();
             if (now >= nextHistorySave)
             {
@@ -326,6 +334,7 @@ namespace MentorRouletteTracker.DutyTracking
             }
 
             log.Information($"Restored pending duty: {current.DutyName}");
+            InterruptPullAtCheckpoint();
         }
 
         private bool CanCheckDutyState()
@@ -390,6 +399,7 @@ namespace MentorRouletteTracker.DutyTracking
                 DutyName = dutyName,
                 DutyType = dutyType,
                 DeathTimestampsRecorded = dutyType != "PvP",
+                PullsRecorded = dutyType != "PvP",
                 PvPRosterComplete = dutyType == "PvP" ? false : null,
                 TrackPvpEnemies = config.TrackPvpEnemies,
                 RecorderName = localPlayer?.Name.TextValue ?? string.Empty,
@@ -398,6 +408,7 @@ namespace MentorRouletteTracker.DutyTracking
                 CheckpointUtc = DateTime.UtcNow
             };
             current.PvPMode = DutyClassification.Mode(current);
+            ResetPullTracking();
 
             deathTrackingTerritory = clientState.TerritoryType;
             previousDeathStates.Clear();
@@ -435,6 +446,8 @@ namespace MentorRouletteTracker.DutyTracking
 
             current.Completed = completed;
             var end = (endedAtUtc ?? DateTime.UtcNow).ToUniversalTime();
+            current.ClosePull(DutyElapsed(end), completed ? DutyPullOutcome.DutyCompleted :
+                endedAtUtc.HasValue ? DutyPullOutcome.Interrupted : DutyPullOutcome.DutyLeft);
             var duration = end - current.Timestamp.ToUniversalTime();
             current.TimeInDuty = duration < TimeSpan.Zero ? TimeSpan.Zero : duration;
 
@@ -702,9 +715,12 @@ namespace MentorRouletteTracker.DutyTracking
                 snapshot.DeathCount++;
                 if (current is { DutyType: not "PvP" })
                 {
-                    var elapsed = DateTime.UtcNow - current.Timestamp.ToUniversalTime();
+                    var now = DateTime.UtcNow;
+                    var elapsed = DutyElapsed(now);
+                    var pullNumber = PullForDeath(elapsed);
                     current.DeathTimestamps.Add(new DeathTimestamp(
-                        elapsed < TimeSpan.Zero ? TimeSpan.Zero : elapsed, snapshot.Name, snapshot.World));
+                        elapsed, snapshot.Name, snapshot.World) { PullNumber = pullNumber });
+                    current.CheckpointUtc = now;
                 }
             }
 
@@ -782,6 +798,7 @@ namespace MentorRouletteTracker.DutyTracking
             this.clientState.TerritoryChanged -= OnTerritoryChanged;
             this.dutyState.DutyStarted -= OnDutyStarted;
             this.dutyState.DutyWiped -= OnDutyWiped;
+            this.dutyState.DutyRecommenced -= OnDutyRecommenced;
             this.dutyState.DutyCompleted -= OnDutyCompleted;
             this.framework.Update -= OnFrameworkUpdate;
         }

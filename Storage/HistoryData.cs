@@ -33,7 +33,9 @@ internal readonly record struct DutyRow(
     bool PvPExtendedStatsComplete,
     bool PvPLookupFinished,
     bool DeathTimestampsRecorded,
-    string DeathTimestampsJson);
+    string DeathTimestampsJson,
+    bool PullsRecorded,
+    string PullsJson);
 
 internal readonly record struct PlayerRow(
     string Name,
@@ -81,7 +83,9 @@ internal sealed record DutyWrite(string Id, DutyRow Record, IReadOnlyList<Player
             record.PvPExtendedStatsComplete,
             record.PvPLookupFinished,
             record.DeathTimestampsRecorded,
-            System.Text.Json.JsonSerializer.Serialize(record.DeathTimestamps));
+            System.Text.Json.JsonSerializer.Serialize(record.DeathTimestamps),
+            record.PullsRecorded,
+            System.Text.Json.JsonSerializer.Serialize(record.Pulls));
         var party = record.Party.Select(player => new PlayerRow(
             player.Name ?? string.Empty,
             player.Job ?? string.Empty,
@@ -113,7 +117,7 @@ internal sealed record DutyWrite(string Id, DutyRow Record, IReadOnlyList<Player
 
     public DutyRecord ToRecord()
     {
-        return new DutyRecord
+        var record = new DutyRecord
         {
             Timestamp = Record.Timestamp,
             CheckpointUtc = Record.CheckpointUtc,
@@ -139,6 +143,8 @@ internal sealed record DutyWrite(string Id, DutyRow Record, IReadOnlyList<Player
             PvPLookupFinished = Record.PvPLookupFinished,
             DeathTimestampsRecorded = Record.DeathTimestampsRecorded,
             DeathTimestamps = SqliteHistoryStore.ReadDeathTimestamps(Record.DeathTimestampsJson),
+            PullsRecorded = Record.PullsRecorded,
+            Pulls = SqliteHistoryStore.ReadPulls(Record.PullsJson),
             Party = Party.Select(player => new PartyMemberSnapshot
             {
                 Name = player.Name,
@@ -159,6 +165,8 @@ internal sealed record DutyWrite(string Id, DutyRow Record, IReadOnlyList<Player
                 PvPHealingDone = player.PvPHealingDone
             }).ToList()
         };
+        SqliteHistoryStore.ValidatePullLinks(record);
+        return record;
     }
 }
 

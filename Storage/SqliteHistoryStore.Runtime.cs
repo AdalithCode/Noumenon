@@ -59,8 +59,11 @@ public sealed partial class SqliteHistoryStore
                     PvPLookupFinished = (long)reader["pvp_lookup_finished"] != 0,
                     DeathTimestampsRecorded = (long)reader["pve_death_timestamps_recorded"] != 0,
                     DeathTimestamps = ReadDeathTimestamps((string)reader["pve_deaths_json"]),
+                    PullsRecorded = (long)reader["pve_pulls_recorded"] != 0,
+                    Pulls = ReadPulls((string)reader["pve_pulls_json"]),
                     PvPPlacement = reader["pvp_placement"] is DBNull ? null : checked((int)(long)reader["pvp_placement"])
                 };
+                ValidatePullLinks(record);
                 string id = (string)reader["id"];
                 bool pending = (long)reader["is_pending"] != 0;
                 identities.Add(id, record);
@@ -193,6 +196,8 @@ public sealed partial class SqliteHistoryStore
                 ["pvp_lookup_finished"] = record.PvPLookupFinished ? 1 : 0,
                 ["pve_death_timestamps_recorded"] = record.DeathTimestampsRecorded ? 1 : 0,
                 ["pve_deaths_json"] = record.DeathTimestampsJson,
+                ["pve_pulls_recorded"] = record.PullsRecorded ? 1 : 0,
+                ["pve_pulls_json"] = record.PullsJson,
                 ["is_pending"] = row.Pending ? 1 : 0,
                 ["checkpoint_utc"] = record.CheckpointUtc?.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture)
             };
@@ -234,9 +239,32 @@ public sealed partial class SqliteHistoryStore
         var deaths = JsonSerializer.Deserialize<List<DeathTimestamp>>(json)
             ?? throw new InvalidDataException("The death timeline is missing.");
         if (deaths.Any(death => death == null || death.Elapsed < TimeSpan.Zero ||
-            string.IsNullOrWhiteSpace(death.Name) || death.World == null))
+            string.IsNullOrWhiteSpace(death.Name) || death.World == null || death.PullNumber is <= 0))
             throw new InvalidDataException("The death timeline contains an invalid entry.");
         return deaths;
+    }
+
+    internal static List<DutyPull> ReadPulls(string json)
+    {
+        var pulls = JsonSerializer.Deserialize<List<DutyPull>>(json)
+            ?? throw new InvalidDataException("The pull history is missing.");
+        if (pulls.Where((pull, i) => pull == null || pull.Number != i + 1 || pull.Started < TimeSpan.Zero ||
+            pull.Ended < TimeSpan.Zero || (pull.Started.HasValue && pull.Ended < pull.Started) ||
+            !Enum.IsDefined(pull.Outcome) || (pull.Ended.HasValue == (pull.Outcome == DutyPullOutcome.InProgress)) ||
+            (!pull.Ended.HasValue && i != pulls.Count - 1)).Any())
+            throw new InvalidDataException("The pull history contains an invalid entry.");
+        return pulls;
+    }
+
+    internal static void ValidatePullLinks(DutyRecord record)
+    {
+        foreach (var death in record.DeathTimestamps.Where(death => death.PullNumber.HasValue))
+        {
+            var number = death.PullNumber!.Value;
+            if (number > record.Pulls.Count || record.Pulls[number - 1].Started > death.Elapsed ||
+                record.Pulls[number - 1].Ended < death.Elapsed)
+                throw new InvalidDataException("A death timestamp doesn't match its recorded pull.");
+        }
     }
 
     private SqliteConnection OpenExisting()
