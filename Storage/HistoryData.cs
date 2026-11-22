@@ -145,7 +145,8 @@ internal sealed record DutyWrite(string Id, DutyRow Record, IReadOnlyList<Player
             DeathTimestamps = SqliteHistoryStore.ReadDeathTimestamps(Record.DeathTimestampsJson),
             PullsRecorded = Record.PullsRecorded,
             Pulls = SqliteHistoryStore.ReadPulls(Record.PullsJson),
-            Party = Party.Select(player => new PartyMemberSnapshot
+            Party = Party.Where(player => Record.DutyType != "PvP" || !string.IsNullOrWhiteSpace(player.Name))
+                .Select(player => new PartyMemberSnapshot
             {
                 Name = player.Name,
                 Job = player.Job,

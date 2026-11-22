@@ -84,9 +84,12 @@ public sealed partial class SqliteHistoryStore
             {
                 if (!identities.TryGetValue((string)reader["duty_id"], out var record))
                     throw new InvalidDataException("A player snapshot has no duty.");
+                var name = (string)reader["name"];
+                if (record.DutyType == "PvP" && string.IsNullOrWhiteSpace(name))
+                    continue;
                 record.Party.Add(new PartyMemberSnapshot
                 {
-                    Name = (string)reader["name"], World = (string)reader["world"], Job = (string)reader["job"],
+                    Name = name, World = (string)reader["world"], Job = (string)reader["job"],
                     Race = (string)reader["race"], Gender = (string)reader["gender"], Status = (string)reader["status"],
                     DeathCount = checked((int)(long)reader["death_count"]),
                     PvPScoreboardDeaths = reader["pvp_scoreboard_deaths"] is DBNull ? null : checked((int)(long)reader["pvp_scoreboard_deaths"]),

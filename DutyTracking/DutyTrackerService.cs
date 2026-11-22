@@ -570,10 +570,13 @@ namespace MentorRouletteTracker.DutyTracking
 
         private void ProcessPartyMember(IPartyMember member)
         {
+            var name = member.Name.TextValue;
+            if (string.IsNullOrWhiteSpace(name))
+                return;
+
             var race = "Unknown";
             var gender = "Unknown";
             var status = "Unknown";
-            var name = member.Name.TextValue;
             var job = member.ClassJob.Value.Abbreviation.ExtractText();
             var world = member.World.Value.Name.ExtractText();
             var gameObject = member.GameObject;
