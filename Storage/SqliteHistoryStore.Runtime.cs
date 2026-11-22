@@ -261,7 +261,7 @@ public sealed partial class SqliteHistoryStore
         foreach (var death in record.DeathTimestamps.Where(death => death.PullNumber.HasValue))
         {
             var number = death.PullNumber!.Value;
-            if (number > record.Pulls.Count || record.Pulls[number - 1].Started > death.Elapsed ||
+            if (number > record.Pulls.Count || (!death.BeforePull && record.Pulls[number - 1].Started > death.Elapsed) ||
                 record.Pulls[number - 1].Ended < death.Elapsed)
                 throw new InvalidDataException("A death timestamp doesn't match its recorded pull.");
         }

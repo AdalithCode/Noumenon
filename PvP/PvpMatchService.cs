@@ -328,11 +328,14 @@ namespace MentorRouletteTracker.PvP
                 log.Warning($"PvP scoreboard {result.MatchId}: no recorded players matched the roster.");
                 return false;
             }
+            var changed = ApplyScoreboardJobs(record, result);
             if (record.Completed && record.PvPRosterComplete == true && record.PvPCombatStatsComplete &&
                 record.PvPResultsComplete && record.PvPExtendedStatsComplete)
+            {
+                if (changed) config.History.Save();
                 return true;
+            }
 
-            var changed = false;
             var recorderResult = result.Players.GetValueOrDefault(recorderKey);
             var confirmedResult = result.Mode switch
             {
@@ -406,11 +409,6 @@ namespace MentorRouletteTracker.PvP
                         snapshot.PvPScoreboardDeaths = player.Deaths;
                         changed = true;
                     }
-                    if ((string.IsNullOrWhiteSpace(snapshot.Job) || snapshot.Job == "Unknown") && player.Job != "Unknown")
-                    {
-                        snapshot.Job = player.Job;
-                        changed = true;
-                    }
                 }
             }
 
@@ -456,6 +454,28 @@ namespace MentorRouletteTracker.PvP
                 log.Information($"PvP scoreboard applied: {record.DutyName} | {result.Players.Count} scoreboard players, {record.Party.Count} recorded players.");
             }
             return finished;
+        }
+
+        private static bool ApplyScoreboardJobs(DutyRecord record, PvpMatchResult result)
+        {
+            var changed = false;
+            foreach (var snapshot in record.Party)
+            {
+                if (result.Players.TryGetValue($"{snapshot.Name}@{snapshot.World}", out var player) &&
+                    !string.IsNullOrWhiteSpace(player.Job) && player.Job != "Unknown" && snapshot.Job != player.Job)
+                {
+                    snapshot.Job = player.Job;
+                    changed = true;
+                }
+            }
+            if (!string.IsNullOrWhiteSpace(record.RecorderName) && !string.IsNullOrWhiteSpace(record.RecorderWorld) &&
+                result.Players.TryGetValue($"{record.RecorderName}@{record.RecorderWorld}", out var recorder) &&
+                !string.IsNullOrWhiteSpace(recorder.Job) && recorder.Job != "Unknown" && record.PlayerJob != recorder.Job)
+            {
+                record.PlayerJob = recorder.Job;
+                changed = true;
+            }
+            return changed;
         }
 
         private void OnFrameworkUpdate(IFramework framework)

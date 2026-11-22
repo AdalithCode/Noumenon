@@ -19,7 +19,7 @@ public partial class MainWindow
 
         foreach (var pull in record.Pulls)
         {
-            var deaths = record.DeathTimestamps.Where(death => death.PullNumber == pull.Number).ToList();
+            var deaths = record.DeathTimestamps.Where(death => death.PullNumber == pull.Number && !death.BeforePull).ToList();
             ImGui.PushID(pull.Number);
             try
             {
@@ -51,7 +51,7 @@ public partial class MainWindow
             finally { ImGui.PopID(); }
         }
 
-        var unassigned = record.DeathTimestamps.Where(death => death.PullNumber == null).ToList();
+        var unassigned = record.DeathTimestamps.Where(death => death.PullNumber == null || death.BeforePull).ToList();
         if (unassigned.Count > 0 && ImGui.TreeNodeEx($"Unassigned deaths ({unassigned.Count})", ImGuiTreeNodeFlags.SpanAvailWidth))
         {
             try { DrawDeathRows("UnassignedDeaths", unassigned); }
