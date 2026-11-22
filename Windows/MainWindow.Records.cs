@@ -462,6 +462,31 @@ namespace MentorRouletteTracker
             }
         }
 
+        private static List<PartyMemberSnapshot> SortPartyMembers(DutyRecord record, int column, bool ascending)
+        {
+            var party = record.Party.OrderBy(member => GetJobRoleOrder(member.Job)).ThenBy(member => member.Name);
+            if (column == 6)
+            {
+                var knownFirst = party.OrderBy(member => !EffectiveDeaths(record, member).HasValue);
+                return (ascending
+                    ? knownFirst.ThenBy(member => EffectiveDeaths(record, member))
+                    : knownFirst.ThenByDescending(member => EffectiveDeaths(record, member))).ToList();
+            }
+
+            Func<PartyMemberSnapshot, string>? value = column switch
+            {
+                0 => member => member.Name,
+                1 => member => member.World,
+                2 => member => member.Job,
+                3 => member => member.Race,
+                4 => member => member.Gender,
+                5 => GetPlayerStatus,
+                _ => null
+            };
+            return value == null ? party.ToList()
+                : (ascending ? party.OrderBy(value) : party.OrderByDescending(value)).ToList();
+        }
+
         private void DrawDetailWindow()
         {
             if (!showDetailWindow || selectedRecord == null)
@@ -539,10 +564,6 @@ namespace MentorRouletteTracker
                         var localPlayerName =
                             objectTable.LocalPlayer?.Name.TextValue;
 
-                        var sortedParty = r.Party
-                            .OrderBy(x => GetJobRoleOrder(x.Job))
-                            .ThenBy(x => x.Name)
-                            .ToList();
 
                         if (BeginStyledTable(
                                 "partyDetail",
@@ -566,48 +587,11 @@ namespace MentorRouletteTracker
                                 ImGui.TableHeadersRow();
 
                                 var sortSpecs = ImGui.TableGetSortSpecs();
-
+                                var sortedParty = SortPartyMembers(r,
+                                    sortSpecs.SpecsCount > 0 ? ConfiguredSortColumn(sortSpecs.Specs.ColumnIndex) : -1,
+                                    sortSpecs.SpecsCount == 0 || sortSpecs.Specs.SortDirection == ImGuiSortDirection.Ascending);
                                 if (sortSpecs.SpecsCount > 0)
-                                {
-                                    var spec = sortSpecs.Specs;
-                                    bool ascending =
-                                        spec.SortDirection == ImGuiSortDirection.Ascending;
-
-                                    sortedParty = ConfiguredSortColumn(spec.ColumnIndex) switch
-                                    {
-                                        0 => ascending
-                                            ? sortedParty.OrderBy(x => x.Name).ToList()
-                                            : sortedParty.OrderByDescending(x => x.Name).ToList(),
-
-                                        1 => ascending
-                                            ? sortedParty.OrderBy(x => x.World).ToList()
-                                            : sortedParty.OrderByDescending(x => x.World).ToList(),
-
-                                        2 => ascending
-                                            ? sortedParty.OrderBy(x => x.Job).ToList()
-                                            : sortedParty.OrderByDescending(x => x.Job).ToList(),
-
-                                        3 => ascending
-                                            ? sortedParty.OrderBy(x => x.Race).ToList()
-                                            : sortedParty.OrderByDescending(x => x.Race).ToList(),
-
-                                        4 => ascending
-                                            ? sortedParty.OrderBy(x => x.Gender).ToList()
-                                            : sortedParty.OrderByDescending(x => x.Gender).ToList(),
-
-                                        5 => ascending
-                                            ? sortedParty.OrderBy(GetPlayerStatus).ToList()
-                                            : sortedParty.OrderByDescending(GetPlayerStatus).ToList(),
-
-                                        6 => ascending
-                                            ? sortedParty.OrderBy(x => !EffectiveDeaths(r, x).HasValue).ThenBy(x => EffectiveDeaths(r, x)).ToList()
-                                            : sortedParty.OrderBy(x => !EffectiveDeaths(r, x).HasValue).ThenByDescending(x => EffectiveDeaths(r, x)).ToList(),
-
-                                        _ => sortedParty
-                                    };
-
                                     sortSpecs.SpecsDirty = false;
-                                }
 
                                 foreach (var member in sortedParty)
                                 {

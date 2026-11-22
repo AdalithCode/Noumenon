@@ -122,7 +122,7 @@ public static class PvpTrackerDatabase
                         {
                             if (!value.IsDocument || !TryAlias(value["Player"], out var name, out var world))
                                 continue;
-                            AddPlayer(result, name, world, ReadJob(value.AsDocument), ReadDeaths(value["Deaths"]),
+                            AddPlayer(result, name, world, ReadJob(value.AsDocument), ReadCount(value["Deaths"]),
                                 ReadTeam(new BsonValue(team.Key), mode), value.AsDocument);
                         }
                     }
@@ -145,7 +145,7 @@ public static class PvpTrackerDatabase
                         if (!entry.Value.IsDocument || separator <= 0 || separator == entry.Key.Length - 1)
                             continue;
                         AddPlayer(result, entry.Key[..separator], entry.Key[(separator + 1)..], "Unknown",
-                            ReadDeaths(entry.Value["Deaths"]), scoreboard: entry.Value.AsDocument);
+                            ReadCount(entry.Value["Deaths"]), scoreboard: entry.Value.AsDocument);
                     }
                 }
                 if (result.Players.Count == 0 || !result.Players.Values.Any(player => player.Deaths.HasValue))
@@ -157,7 +157,7 @@ public static class PvpTrackerDatabase
                     {
                         var name = ReadTeam(new BsonValue(team.Key), mode);
                         if (name.Length > 0 && team.Value.IsDocument &&
-                            ReadDeaths(team.Value["Placement"]) is >= 0 and <= 2 and var place)
+                            ReadCount(team.Value["Placement"]) is >= 0 and <= 2 and var place)
                             placements[name] = place + 1;
                     }
                 }
@@ -185,11 +185,11 @@ public static class PvpTrackerDatabase
     private static bool IsDeleted(BsonDocument match) => match["IsDeleted"].IsBoolean && match["IsDeleted"].AsBoolean;
     private static int? PositiveCount(BsonValue value)
     {
-        var count = ReadDeaths(value);
+        var count = ReadCount(value);
         return count > 0 ? count : null;
     }
 
-    private static int? ReadDeaths(BsonValue value)
+    private static int? ReadCount(BsonValue value)
     {
         if (!value.IsInt32 && !value.IsInt64)
             return null;
@@ -270,8 +270,8 @@ public static class PvpTrackerDatabase
             player.Team = team;
         if (scoreboard != null)
         {
-            player.Kills ??= ReadDeaths(scoreboard["Kills"]);
-            player.Assists ??= ReadDeaths(scoreboard["Assists"]);
+            player.Kills ??= ReadCount(scoreboard["Kills"]);
+            player.Assists ??= ReadCount(scoreboard["Assists"]);
             player.DamageDealt ??= ReadDamage(scoreboard["DamageDealt"]);
             player.DamageTaken ??= ReadDamage(scoreboard["DamageTaken"]);
             player.HealingDone ??= ReadDamage(scoreboard["HPRestored"]);
