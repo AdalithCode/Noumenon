@@ -18,7 +18,11 @@ namespace MentorRouletteTracker
         private sealed record DutyAnalysisData(
             int CompletedDuties, TimeSpan? AverageFullRunTime, double AverageWipes, int JoinedInProgress,
             List<DutyCount> TypeCounts, DutyCount? MostCommon, List<DutyHeatmapCell> Heatmap,
-            List<DutyAnalysisRow> Rows);
+            List<DutyAnalysisRow> Rows)
+        {
+            public (int Column, bool Ascending)? Sort { get; set; }
+            public List<DutyAnalysisRow>? SortedRows { get; set; }
+        }
 
         private DutyAnalysisData GetDutyAnalysisData()
         {
@@ -99,7 +103,7 @@ namespace MentorRouletteTracker
                         ImGui.Separator();
                         ImGui.Spacing();
 
-                        DrawDutySpecificDetails(data.Rows);
+                        DrawDutySpecificDetails(data);
                     }
                 }
             }
@@ -410,8 +414,36 @@ namespace MentorRouletteTracker
             }).ToList();
         }
 
-        private void DrawDutySpecificDetails(List<DutyAnalysisRow> stats)
+        private List<DutyAnalysisRow> GetSortedDutyAnalysisRows(DutyAnalysisData data, int column, bool ascending)
         {
+            if (data.Sort == (column, ascending) && data.SortedRows != null)
+                return data.SortedRows;
+
+            var rows = SortTableRows(data.Rows, row => column switch
+            {
+                0 => row.Duty,
+                1 => row.Runs,
+                2 => row.Deaths,
+                3 => row.AverageDeaths,
+                4 => row.TotalWipes,
+                5 => row.WipesPerRun,
+                6 => row.AverageTime,
+                7 => row.InProgress,
+                8 => row.Sprouts,
+                9 => row.Mentors,
+                10 => row.Players,
+                11 => row.TargetPlayers,
+                >= 12 and <= 28 => PvpStatisticValue(row.Pvp, column - 12),
+                _ => row.Duty
+            }, ascending, row => row.Duty);
+            data.Sort = (column, ascending);
+            data.SortedRows = rows;
+            return rows;
+        }
+
+        private void DrawDutySpecificDetails(DutyAnalysisData data)
+        {
+            var stats = data.Rows;
             DrawSectionHeading("Stats by duty");
             ImGui.PushTextWrapPos();
             try
@@ -440,23 +472,8 @@ namespace MentorRouletteTracker
                     if (sortSpecs.SpecsCount > 0 && IsTableColumnVisible("Duty Analysis", ConfiguredSortColumn(sortSpecs.Specs.ColumnIndex)))
                     {
                         var spec = sortSpecs.Specs;
-                        stats = SortTableRows(stats, row => ConfiguredSortColumn(spec.ColumnIndex) switch
-                        {
-                            0 => row.Duty,
-                            1 => row.Runs,
-                            2 => row.Deaths,
-                            3 => row.AverageDeaths,
-                            4 => row.TotalWipes,
-                            5 => row.WipesPerRun,
-                            6 => row.AverageTime,
-                            7 => row.InProgress,
-                            8 => row.Sprouts,
-                            9 => row.Mentors,
-                            10 => row.Players,
-                            11 => row.TargetPlayers,
-                            >= 12 and <= 28 => PvpStatisticValue(row.Pvp, ConfiguredSortColumn(spec.ColumnIndex) - 12),
-                            _ => row.Duty
-                        }, spec.SortDirection == ImGuiSortDirection.Ascending, row => row.Duty);
+                        stats = GetSortedDutyAnalysisRows(data, ConfiguredSortColumn(spec.ColumnIndex),
+                            spec.SortDirection == ImGuiSortDirection.Ascending);
                         sortSpecs.SpecsDirty = false;
                     }
                     foreach (var row in stats)
