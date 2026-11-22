@@ -66,7 +66,7 @@ public sealed partial class SqliteHistoryStore
                 source.Open();
                 var version = ReadInteger(source, null, "PRAGMA user_version;");
                 if (ReadInteger(source, null, "PRAGMA application_id;") != ApplicationId ||
-                    version is not (6 or 7 or 8 or 9 or 10 or 11 or 12 or CurrentSchemaVersion))
+                    version is not (6 or 7 or 8 or 9 or 10 or 11 or 12 or 13 or CurrentSchemaVersion))
                     throw new InvalidDataException("Choose a supported Noumenon history backup.");
                 copy.Open();
                 source.BackupDatabase(copy);

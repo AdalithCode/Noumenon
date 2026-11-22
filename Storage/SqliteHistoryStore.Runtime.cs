@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 using Microsoft.Data.Sqlite;
 using MentorRouletteTracker.DutyTracking;
 
@@ -56,6 +57,8 @@ public sealed partial class SqliteHistoryStore
                     PvPResultsComplete = (long)reader["pvp_results_complete"] != 0,
                     PvPExtendedStatsComplete = (long)reader["pvp_extended_stats_complete"] != 0,
                     PvPLookupFinished = (long)reader["pvp_lookup_finished"] != 0,
+                    DeathTimestampsRecorded = (long)reader["pve_death_timestamps_recorded"] != 0,
+                    DeathTimestamps = ReadDeathTimestamps((string)reader["pve_deaths_json"]),
                     PvPPlacement = reader["pvp_placement"] is DBNull ? null : checked((int)(long)reader["pvp_placement"])
                 };
                 string id = (string)reader["id"];
@@ -188,6 +191,8 @@ public sealed partial class SqliteHistoryStore
                 ["pvp_results_complete"] = record.PvPResultsComplete ? 1 : 0,
                 ["pvp_extended_stats_complete"] = record.PvPExtendedStatsComplete ? 1 : 0,
                 ["pvp_lookup_finished"] = record.PvPLookupFinished ? 1 : 0,
+                ["pve_death_timestamps_recorded"] = record.DeathTimestampsRecorded ? 1 : 0,
+                ["pve_deaths_json"] = record.DeathTimestampsJson,
                 ["is_pending"] = row.Pending ? 1 : 0,
                 ["checkpoint_utc"] = record.CheckpointUtc?.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture)
             };
@@ -222,6 +227,16 @@ public sealed partial class SqliteHistoryStore
         revision++;
         savedDuties = desired;
         pendingDutyId = snapshot.Duties.SingleOrDefault(row => row.Pending)?.Id;
+    }
+
+    internal static List<DeathTimestamp> ReadDeathTimestamps(string json)
+    {
+        var deaths = JsonSerializer.Deserialize<List<DeathTimestamp>>(json)
+            ?? throw new InvalidDataException("The death timeline is missing.");
+        if (deaths.Any(death => death == null || death.Elapsed < TimeSpan.Zero ||
+            string.IsNullOrWhiteSpace(death.Name) || death.World == null))
+            throw new InvalidDataException("The death timeline contains an invalid entry.");
+        return deaths;
     }
 
     private SqliteConnection OpenExisting()

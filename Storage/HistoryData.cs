@@ -31,7 +31,9 @@ internal readonly record struct DutyRow(
     PvP.PvpMode PvPMode,
     bool PvPResultsComplete,
     bool PvPExtendedStatsComplete,
-    bool PvPLookupFinished);
+    bool PvPLookupFinished,
+    bool DeathTimestampsRecorded,
+    string DeathTimestampsJson);
 
 internal readonly record struct PlayerRow(
     string Name,
@@ -77,7 +79,9 @@ internal sealed record DutyWrite(string Id, DutyRow Record, IReadOnlyList<Player
             record.PvPMode,
             record.PvPResultsComplete,
             record.PvPExtendedStatsComplete,
-            record.PvPLookupFinished);
+            record.PvPLookupFinished,
+            record.DeathTimestampsRecorded,
+            System.Text.Json.JsonSerializer.Serialize(record.DeathTimestamps));
         var party = record.Party.Select(player => new PlayerRow(
             player.Name ?? string.Empty,
             player.Job ?? string.Empty,
@@ -133,6 +137,8 @@ internal sealed record DutyWrite(string Id, DutyRow Record, IReadOnlyList<Player
             PvPResultsComplete = Record.PvPResultsComplete,
             PvPExtendedStatsComplete = Record.PvPExtendedStatsComplete,
             PvPLookupFinished = Record.PvPLookupFinished,
+            DeathTimestampsRecorded = Record.DeathTimestampsRecorded,
+            DeathTimestamps = SqliteHistoryStore.ReadDeathTimestamps(Record.DeathTimestampsJson),
             Party = Party.Select(player => new PartyMemberSnapshot
             {
                 Name = player.Name,

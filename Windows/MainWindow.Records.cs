@@ -672,6 +672,8 @@ namespace MentorRouletteTracker
                     ImGui.Separator();
                     ImGui.Spacing();
 
+                    DrawDeathTimeline(r);
+
                     if (ImGuiComponents.IconButton("EditDutyNote", FontAwesomeIcon.Edit))
                     {
                         noteRecord = r;

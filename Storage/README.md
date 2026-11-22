@@ -61,7 +61,7 @@ Unload Noumenon before replacing the history database with a backup.
 
 ## Schema
 
-New databases create schema 13 directly:
+New databases create schema 14 directly:
 
 - `duty_runs`: duty records, including the pending duty and its checkpoint.
 - `duty_players`: party snapshots in their recorded order.
@@ -71,6 +71,18 @@ Duty IDs stay stable. Updating a duty keeps its row ID, and deleting a duty remo
 its party rows. Timestamps are stored in UTC and loaded as local time for display.
 Checkpoints stay in UTC. Durations use .NET ticks, and unknown scoreboard deaths
 stay null rather than becoming zero.
+
+PvE death timestamps are stored with each duty in `pve_deaths_json`. Each entry
+keeps the player's name/world and elapsed time since entering the duty. The list
+is copied into the save snapshot, so the worker never reads the live timeline.
+It follows the same observed alive-to-dead transitions as the death count, including
+deaths caught during a wipe reset. PvP doesn't create timestamp entries.
+
+`pve_death_timestamps_recorded` is true for new PvE duties. Older records keep their
+death totals and start with an empty timeline and a false flag. If an older pending
+duty resumes, later observed deaths can be added, but the details still explain
+that timestamps weren't recorded from the start. Backups and recovery copies
+include both the timeline and its flag.
 
 `pvp_roster_complete` tracks whether a new PvP scoreboard roster was fully imported.
 False imports can resume after reload while automatic lookup is still active. `pvp_combat_stats_complete` records whether
@@ -93,8 +105,8 @@ lookup before they stop.
 
 ## Database upgrades
 
-Schemas 6 through 12 upgrade to schema 13. Before upgrading, the plugin saves a
-complete backup under `backups/history-before-v13-*.sqlite`. If the backup fails,
+Schemas 6 through 13 upgrade to schema 14. Before upgrading, the plugin saves a
+complete backup under `backups/history-before-v14-*.sqlite`. If the backup fails,
 the upgrade stops.
 
 Upgrades keep existing records, IDs, player order, and the write revision. They add

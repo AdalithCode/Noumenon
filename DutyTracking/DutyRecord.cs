@@ -15,6 +15,8 @@ namespace MentorRouletteTracker.DutyTracking
         public string RecorderWorld { get; set; } = string.Empty;
         public TimeSpan TimeInDuty { get; set; }
         public List<PartyMemberSnapshot> Party { get; set; } = new();
+        public List<DeathTimestamp> DeathTimestamps { get; set; } = new();
+        public bool DeathTimestampsRecorded { get; set; }
         public string Note { get; set; } = string.Empty;
         public int? PvPDeaths { get; set; }
         public bool? PvPRosterComplete { get; set; }

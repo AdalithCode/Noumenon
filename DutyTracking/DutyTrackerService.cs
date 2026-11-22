@@ -339,6 +339,7 @@ namespace MentorRouletteTracker.DutyTracking
             {
                 DutyName = dutyName,
                 DutyType = dutyType,
+                DeathTimestampsRecorded = dutyType != "PvP",
                 PvPRosterComplete = dutyType == "PvP" ? false : null,
                 TrackPvpEnemies = config.TrackPvpEnemies,
                 RecorderName = localPlayer?.Name.TextValue ?? string.Empty,
@@ -628,6 +629,12 @@ namespace MentorRouletteTracker.DutyTracking
                 !wasDead)
             {
                 snapshot.DeathCount++;
+                if (current is { DutyType: not "PvP" })
+                {
+                    var elapsed = DateTime.UtcNow - current.Timestamp.ToUniversalTime();
+                    current.DeathTimestamps.Add(new DeathTimestamp(
+                        elapsed < TimeSpan.Zero ? TimeSpan.Zero : elapsed, snapshot.Name, snapshot.World));
+                }
             }
 
             previousDeathStates[playerKey] = isDead;
