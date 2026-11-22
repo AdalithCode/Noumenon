@@ -105,6 +105,7 @@ namespace MentorRouletteTracker
                 .ToList();
 
             data.People = people;
+            data.MatchingPeople = people.Count(player => MatchesEncounterTarget(player.Race, player.Gender));
             return people;
         }
 
@@ -115,10 +116,9 @@ namespace MentorRouletteTracker
             var data = GetPlayerViewData();
             var people = GetPeopleRows(data);
 
-            int matchingPlayers = people.Count(x => MatchesEncounterTarget(x.Race, x.Gender));
             ImGui.Text($"Unique players: {people.Count}");
             ImGui.SameLine();
-            ImGui.TextDisabled($"({matchingPlayers} {EncounterTargetLabel})");
+            ImGui.TextDisabled($"({data.MatchingPeople} {EncounterTargetLabel})");
             ImGui.Spacing();
             ImGui.PushTextWrapPos();
             try

@@ -176,16 +176,8 @@ namespace MentorRouletteTracker
                         (ConfiguredSortColumn(sortSpecs.Specs.ColumnIndex) != 1 || detail))
                     {
                         var spec = sortSpecs.Specs;
-                        rows = SortTableRows(rows, row => ConfiguredSortColumn(spec.ColumnIndex) switch
-                        {
-                            0 => row.Name,
-                            1 => row.Detail,
-                            2 or 5 => row.Seen,
-                            3 => row.Deaths,
-                            4 => row.AverageDeaths,
-                            >= 6 and <= 22 => PvpStatisticValue(row.Pvp, ConfiguredSortColumn(spec.ColumnIndex) - 6, averages: true),
-                            _ => row.Name
-                        }, spec.SortDirection == ImGuiSortDirection.Ascending, row => row.Name + " " + row.Detail);
+                        rows = GetSortedPlayerStatistics(data, statistic, ConfiguredSortColumn(spec.ColumnIndex),
+                            spec.SortDirection == ImGuiSortDirection.Ascending);
                         sortSpecs.SpecsDirty = false;
                     }
 

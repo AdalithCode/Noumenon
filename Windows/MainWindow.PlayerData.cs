@@ -18,8 +18,10 @@ namespace MentorRouletteTracker
             public required PlayerOverview Overview { get; init; }
             public List<PeopleTableRow>? People { get; set; }
             public (int Column, int Direction)? PeopleSort { get; set; }
+            public int MatchingPeople { get; set; }
             public List<PlayerEncounter>? StatisticsEncounters { get; set; }
             public readonly Dictionary<PlayerStatistic, List<PlayerStatisticRow>> Statistics = new();
+            public readonly Dictionary<PlayerStatistic, (int Column, bool Ascending, List<PlayerStatisticRow> Rows)> StatisticsSort = new();
         }
 
         private sealed record PlayerOverview(
@@ -104,6 +106,27 @@ namespace MentorRouletteTracker
             // Rolling date filters must still age out duties without a save or filter change.
             nextPlayerViewRefresh = now.AddSeconds(1);
             return playerViewData;
+        }
+
+        private List<PlayerStatisticRow> GetSortedPlayerStatistics(PlayerViewData data, PlayerStatistic statistic,
+            int column, bool ascending)
+        {
+            if (data.StatisticsSort.TryGetValue(statistic, out var cached) &&
+                cached.Column == column && cached.Ascending == ascending)
+                return cached.Rows;
+
+            var rows = SortTableRows(GetPlayerStatistics(data, statistic), row => column switch
+            {
+                0 => row.Name,
+                1 => row.Detail,
+                2 or 5 => row.Seen,
+                3 => row.Deaths,
+                4 => row.AverageDeaths,
+                >= 6 and <= 22 => PvpStatisticValue(row.Pvp, column - 6, averages: true),
+                _ => row.Name
+            }, ascending, row => row.Name + " " + row.Detail);
+            data.StatisticsSort[statistic] = (column, ascending, rows);
+            return rows;
         }
 
         private List<PlayerStatisticRow> GetPlayerStatistics(PlayerViewData data, PlayerStatistic statistic)
