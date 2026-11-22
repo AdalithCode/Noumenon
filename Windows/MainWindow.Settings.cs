@@ -154,6 +154,18 @@ namespace MentorRouletteTracker
                         config.TrackAllianceMembers = trackAlliance;
                         config.Save();
                     }
+
+                    ImGui.Spacing();
+                    var raceDisplay = config.UseMostRecentPlayerRace ? 1 : 0;
+                    ImGui.SetNextItemWidth(ImGui.GetFontSize() * 14);
+                    if (ImGui.Combo("Race shown in People", ref raceDisplay,
+                            ["Most observed", "Most recently seen"], 2))
+                    {
+                        config.UseMostRecentPlayerRace = raceDisplay == 1;
+                        config.Save();
+                    }
+                    if (ImGui.IsItemHovered())
+                        ImGui.SetTooltip("Uses the encounters matching your filters. Unknown races are skipped. Ties for most observed use the most recent race.");
                 }
                 finally
                 {

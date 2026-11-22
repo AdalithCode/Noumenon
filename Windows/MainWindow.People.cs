@@ -68,6 +68,19 @@ namespace MentorRouletteTracker
                 qualifiedPlayers.Contains((encounter.Player.Name, encounter.Player.World))).ToList();
         }
 
+        private string GetPlayerRace(IEnumerable<PlayerEncounter> encounters)
+        {
+            var known = encounters.Where(entry => !string.IsNullOrWhiteSpace(entry.Player.Race) && entry.Player.Race != "Unknown");
+            if (config.UseMostRecentPlayerRace)
+                return known.OrderByDescending(entry => entry.Record.Timestamp)
+                    .Select(entry => entry.Player.Race).FirstOrDefault() ?? "Unknown";
+
+            return known.GroupBy(entry => entry.Player.Race)
+                .OrderByDescending(race => race.Count())
+                .ThenByDescending(race => race.Max(entry => entry.Record.Timestamp))
+                .Select(race => race.Key).FirstOrDefault() ?? "Unknown";
+        }
+
         private List<PeopleTableRow> GetPeopleRows(PlayerViewData data)
         {
             if (data.People != null)
@@ -83,8 +96,7 @@ namespace MentorRouletteTracker
                     {
                         Name = group.Key.Name,
                         World = group.Key.World,
-                        Race = entries.Select(x => x.Player.Race)
-                            .FirstOrDefault(x => !string.IsNullOrWhiteSpace(x) && x != "Unknown") ?? "Unknown",
+                        Race = GetPlayerRace(entries),
                         Gender = entries.Select(x => x.Player.Gender)
                             .FirstOrDefault(x => !string.IsNullOrWhiteSpace(x) && x != "Unknown") ?? "Unknown",
                         Encounters = entries.OrderByDescending(entry => entry.Record.Timestamp).ToList(),
@@ -135,7 +147,8 @@ namespace MentorRouletteTracker
             if (people.Count == 0)
                 ImGui.TextDisabled("No players match these filters. Clear filters or lower minimum encounters to see more players.");
 
-            if (people.Count > 0 && BeginConfiguredTable("People", "peopleTable", verticalScroll: true))
+            if (people.Count > 0 && BeginConfiguredTable("People", "peopleTable", verticalScroll: true,
+                    height: Math.Max(1, ImGui.GetContentRegionAvail().Y), fitRows: people.Count))
             {
                 try
                 {
@@ -257,7 +270,9 @@ namespace MentorRouletteTracker
                             ImGuiTableFlags.RowBg |
                             ImGuiTableFlags.ScrollY |
                             ImGuiTableFlags.Resizable |
-                            ImGuiTableFlags.SizingStretchProp))
+                            ImGuiTableFlags.SizingStretchProp,
+                            new Vector2(0, FittedTableHeight("playerHistoryTable", selected.Encounters.Count,
+                                maxHeight: Math.Max(1, ImGui.GetContentRegionAvail().Y)))))
                         {
                             try
                             {

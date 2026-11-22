@@ -61,6 +61,7 @@ namespace MentorRouletteTracker
                 EndDate = customEndDate.Date,
                 minimumEncounters,
                 config.IncludeSelfInStatistics,
+                config.UseMostRecentPlayerRace,
                 EncounterTargetRace,
                 EncounterTargetGender,
                 LocalPlayer = objectTable.LocalPlayer?.Name.TextValue

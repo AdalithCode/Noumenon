@@ -189,10 +189,8 @@ namespace MentorRouletteTracker
 
             DutyPlayerCounts Counts(DutyRecord record) => GetRecordPlayerCounts(data, record);
 
-            var recordRowHeight = ImGui.GetTextLineHeight() + TableCellVerticalPadding * 2;
-            var tableHeight = Math.Min(Math.Max(1, ImGui.GetContentRegionAvail().Y),
-                recordRowHeight * (records.Count + 2) + ImGui.GetStyle().ScrollbarSize);
-            if (BeginConfiguredTable("Records", completed ? "completedRecords" : "incompleteRecords", verticalScroll: true, height: tableHeight))
+            if (BeginConfiguredTable("Records", completed ? "completedRecords" : "incompleteRecords",
+                    verticalScroll: true, height: Math.Max(1, ImGui.GetContentRegionAvail().Y), fitRows: records.Count))
             {
                 try
                 {

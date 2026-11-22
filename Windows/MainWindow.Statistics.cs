@@ -166,7 +166,7 @@ namespace MentorRouletteTracker
             var key = StatisticTableKey(statistic);
             var detail = statistic == PlayerStatistic.RaceAndGender;
             var total = rows.Sum(row => row.Seen);
-            if (BeginConfiguredTable(key, tableId, showDetail: detail))
+            if (BeginConfiguredTable(key, tableId, showDetail: detail, fitRows: rows.Count))
             {
                 try
                 {

@@ -9,6 +9,8 @@ namespace MentorRouletteTracker
         private const float TableCellVerticalPadding = 3f;
         private int[]? configuredColumnOrder;
         private int[]? configuredColumnPositions;
+        private readonly Dictionary<string, int> tableHeaderLines = new();
+        private string? configuredTableId;
         private string? draggedColumnTable;
         private string? draggedColumnId;
         private sealed record TableColumnOption(string Id, string Label, bool DefaultVisible = true, bool Required = false);
@@ -75,8 +77,18 @@ namespace MentorRouletteTracker
         private static string StatisticTableKey(PlayerStatistic statistic) =>
             "Statistics: " + (statistic == PlayerStatistic.RaceAndGender ? "Race and gender" : statistic.ToString());
 
+        private float FittedTableHeight(string id, int rows, bool horizontalScroll = false, float maxHeight = 0)
+        {
+            var textHeight = ImGui.GetTextLineHeight();
+            var height = (textHeight + TableCellVerticalPadding * 2) * (rows + 1) +
+                (tableHeaderLines.GetValueOrDefault(id, 1) - 1) * textHeight +
+                ImGui.GetStyle().ChildBorderSize * 2 +
+                (horizontalScroll ? ImGui.GetStyle().ScrollbarSize : 0);
+            return maxHeight > 0 ? Math.Min(height, maxHeight) : height;
+        }
+
         private bool BeginConfiguredTable(string table, string id, bool verticalScroll = false,
-            float height = 0, bool showDetail = false)
+            float height = 0, bool showDetail = false, int? fitRows = null)
         {
             var visibleCount = TableColumnOptions[table].Select((column, index) => index)
                 .Count(index => IsTableColumnVisible(table, index) &&
@@ -84,20 +96,25 @@ namespace MentorRouletteTracker
             var availableWidth = Math.Max(1f, ImGui.GetContentRegionAvail().X);
             var minimumWidth = ImGui.GetFontSize() * (9f + Math.Max(0, visibleCount - 1) * 4.25f);
             var horizontalScroll = minimumWidth > availableWidth;
+            var order = GetConfiguredColumnOrder(table);
+            var tableId = order.Where((index, position) => index != position).Any()
+                ? id + "##order:" + string.Join(',', order) : id;
+            if (fitRows.HasValue)
+                height = FittedTableHeight(tableId, fitRows.Value, horizontalScroll, height);
             var flags = ImGuiTableFlags.BordersOuter | ImGuiTableFlags.BordersInnerH |
                 ImGuiTableFlags.RowBg | ImGuiTableFlags.Resizable | ImGuiTableFlags.Sortable |
                 ImGuiTableFlags.SizingStretchProp;
+            if (table == "Records")
+                flags |= ImGuiTableFlags.SortTristate;
             if (verticalScroll)
                 flags |= ImGuiTableFlags.ScrollY;
             if (horizontalScroll)
                 flags |= ImGuiTableFlags.ScrollX;
 
-            var order = GetConfiguredColumnOrder(table);
-            var tableId = order.Where((index, position) => index != position).Any()
-                ? id + "##order:" + string.Join(',', order) : id;
             if (!BeginStyledTable(tableId, TableColumnOptions[table].Length, flags,
                 new Vector2(0, height), horizontalScroll ? minimumWidth : 0))
                 return false;
+            configuredTableId = tableId;
             configuredColumnOrder = order;
             configuredColumnPositions = new int[order.Length];
             for (var position = 0; position < order.Length; position++)
@@ -186,6 +203,7 @@ namespace MentorRouletteTracker
         private void EndStyledTable()
         {
             ImGui.EndTable();
+            configuredTableId = null;
             configuredColumnOrder = null;
             configuredColumnPositions = null;
             var min = ImGui.GetItemRectMin();
@@ -242,6 +260,8 @@ namespace MentorRouletteTracker
                 flags |= ImGuiTableColumnFlags.WidthStretch;
                 if (i == 0)
                     flags |= ImGuiTableColumnFlags.PreferSortAscending;
+                if (table == "Records" && columns[i].Id == "started")
+                    flags |= ImGuiTableColumnFlags.DefaultSort | ImGuiTableColumnFlags.PreferSortDescending;
                 if (table == "People" && columns[i].Id == "seen")
                     flags |= ImGuiTableColumnFlags.PreferSortDescending;
                 var label = i == 0 && groupLabel != null ? groupLabel : ColumnLabel(columns[i]);
@@ -252,17 +272,22 @@ namespace MentorRouletteTracker
             }
             if (scrollable)
                 ImGui.TableSetupScrollFreeze(1, 1);
+            var headerLines = 1;
             ImGui.TableNextRow(ImGuiTableRowFlags.Headers);
             for (var i = 0; i < columns.Length; i++)
             {
                 if (!SetConfiguredColumnIndex(i))
                     continue;
-                ImGui.TableHeader(TableHeaderLabel(labels[i], ImGui.GetContentRegionAvail().X));
+                var header = TableHeaderLabel(labels[i], ImGui.GetContentRegionAvail().X);
+                headerLines = Math.Max(headerLines, header.Count(character => character == '\n') + 1);
+                ImGui.TableHeader(header);
                 if (ImGui.IsItemHovered())
                     ImGui.SetTooltip(columns[i].Id.EndsWith("PerMinute", StringComparison.Ordinal)
                         ? "Score divided by recorded duty minutes, including waiting time. Groups combine each player's score and time. Click to sort."
                         : labels[i] + " — click to sort");
             }
+            if (configuredTableId != null)
+                tableHeaderLines[configuredTableId] = headerLines;
         }
 
         private void DrawTableCell(int index, string text)

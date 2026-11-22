@@ -461,9 +461,8 @@ namespace MentorRouletteTracker
                 return;
             }
 
-            var rowHeight = ImGui.GetTextLineHeight() + TableCellVerticalPadding * 2;
-            var height = rowHeight * (Math.Min(stats.Count, 12) + 2) + ImGui.GetStyle().ScrollbarSize;
-            if (BeginConfiguredTable("Duty Analysis", "dutySpecificDetails", verticalScroll: true, height: height))
+            if (BeginConfiguredTable("Duty Analysis", "dutySpecificDetails",
+                    verticalScroll: true, fitRows: Math.Min(stats.Count, 12)))
             {
                 try
                 {

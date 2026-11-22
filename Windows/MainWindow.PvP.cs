@@ -52,9 +52,9 @@ public partial class MainWindow
             return;
         }
         var rowHeight = ImGui.GetTextLineHeight() + TableCellVerticalPadding * 2;
-        var desiredHeight = rowHeight * (Math.Min(record.Party.Count, 12) + 2) + ImGui.GetStyle().ScrollbarSize;
         var availableHeight = Math.Max(rowHeight * 3, ImGui.GetContentRegionAvail().Y - ImGui.GetTextLineHeightWithSpacing() * 5);
-        if (!BeginConfiguredTable("PvP records", "pvpPlayerDetailV2", height: Math.Min(desiredHeight, availableHeight), verticalScroll: true))
+        if (!BeginConfiguredTable("PvP records", "pvpPlayerDetailV2", height: availableHeight,
+                verticalScroll: true, fitRows: Math.Min(record.Party.Count, 12)))
             return;
         try
         {
