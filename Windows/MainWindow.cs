@@ -43,8 +43,6 @@ namespace MentorRouletteTracker
 
         private DutyRecord? recordToEdit;
         private bool openEditRecord;
-        private int editWipeCount;
-        private bool editJoinedInProgress;
         private string editError = string.Empty;
 
         private DutyRecord? noteRecord = null;

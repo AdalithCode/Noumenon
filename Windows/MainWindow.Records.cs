@@ -323,8 +323,7 @@ namespace MentorRouletteTracker
         private void StartEditingRecord(DutyRecord record)
         {
             recordToEdit = record;
-            editWipeCount = record.WipeCount;
-            editJoinedInProgress = record.JoinedInProgress;
+            PrepareRecordEdit(record);
             editError = string.Empty;
             openEditRecord = true;
         }
@@ -349,36 +348,34 @@ namespace MentorRouletteTracker
                 ImGui.Text("Edit duty record");
                 ImGui.Separator();
 
-                ImGui.InputInt("Wipes", ref editWipeCount);
-                ImGui.Checkbox("Joined in progress", ref editJoinedInProgress);
+                var height = Math.Min(ImGui.GetIO().DisplaySize.Y * 0.6f, ImGui.GetFontSize() * (editColumns.Count * 2 + 6));
+                try
+                {
+                    if (ImGui.BeginChild("RecordEditFields", new Vector2(Math.Min(ImGui.GetFontSize() * 34,
+                        ImGui.GetIO().DisplaySize.X * 0.85f), height), false))
+                        DrawRecordEditFields();
+                }
+                finally { ImGui.EndChild(); }
 
                 if (!string.IsNullOrEmpty(editError))
                 {
-                    ImGui.TextColored(
-                        new Vector4(1f, 0.3f, 0.3f, 1f),
-                        editError);
+                    ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + Math.Min(ImGui.GetFontSize() * 34,
+                        ImGui.GetIO().DisplaySize.X * 0.85f));
+                    try
+                    {
+                        ImGui.TextColored(new Vector4(1f, 0.3f, 0.3f, 1f), editError);
+                    }
+                    finally { ImGui.PopTextWrapPos(); }
                 }
 
                 ImGui.Separator();
 
                 if (ImGui.Button("Save"))
                 {
-                    if (editWipeCount < 0)
+                    if (TrySaveEditedRecord())
                     {
-                        editError = "Wipes can't be negative.";
-                    }
-                    else if (editWipeCount > 99)
-                    {
-                        editError = "Keep wipes between 0 and 99.";
-                    }
-                    else
-                    {
-                        recordToEdit.WipeCount = editWipeCount;
-                        recordToEdit.JoinedInProgress = editJoinedInProgress;
-
-                        config.History.Save();
-
                         recordToEdit = null;
+                        editDraft = null;
                         ImGui.CloseCurrentPopup();
                     }
                 }
@@ -388,6 +385,7 @@ namespace MentorRouletteTracker
                 if (ImGui.Button("Cancel"))
                 {
                     recordToEdit = null;
+                    editDraft = null;
                     editError = string.Empty;
                     ImGui.CloseCurrentPopup();
                 }
