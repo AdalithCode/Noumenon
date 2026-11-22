@@ -9,6 +9,7 @@ namespace MentorRouletteTracker
     {
         public int Version { get; set; } = 1;
         public bool RecordDuties { get; set; } = true;
+        public bool RecordNpcDuties { get; set; } = true;
         [Newtonsoft.Json.JsonProperty(ObjectCreationHandling = Newtonsoft.Json.ObjectCreationHandling.Replace)]
         public List<uint> TrackedContentTypeIds { get; set; } = [2, 3, 4, 5, 6, 21, 28, 30, 37];
         [Newtonsoft.Json.JsonProperty(ObjectCreationHandling = Newtonsoft.Json.ObjectCreationHandling.Replace)]

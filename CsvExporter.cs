@@ -16,7 +16,7 @@ namespace MentorRouletteTracker
             TimeSpan TimeInDuty, bool Completed, (string Name, string Job, string Race)[] Party);
 
         internal static Row[] Capture(IEnumerable<DutyRecord> records) => records.Select(record => new Row(
-            record.Timestamp, record.DutyName, record.DutyType, record.JoinedInProgress,
+            record.Timestamp, record.DutyName, DutyClassification.NormalizeType(record.DutyType), record.JoinedInProgress,
             record.WipeCount, record.LalafellCount, record.PlayerJob, record.TimeInDuty,
             record.Completed, record.Party.Select(player => (player.Name, player.Job, player.Race)).ToArray())).ToArray();
 

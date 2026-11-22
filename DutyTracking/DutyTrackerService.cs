@@ -21,6 +21,9 @@ namespace MentorRouletteTracker.DutyTracking
         private readonly IPluginLog log;
         private readonly Configuration config;
         private readonly Func<bool> pvpStatsEnabled;
+        private readonly Func<uint, DutyRecordingMode> readDutyMode;
+        private bool currentStartedThisSession;
+        private bool recordCurrentNpcDuty;
         private static readonly TimeSpan InitialPartyRefreshPeriod = TimeSpan.FromSeconds(10);
         private static readonly TimeSpan InitialPartyRefreshInterval = TimeSpan.FromSeconds(1);
         private static readonly TimeSpan PartyRefreshInterval = TimeSpan.FromSeconds(30);
@@ -62,7 +65,8 @@ namespace MentorRouletteTracker.DutyTracking
             IFramework framework,
             IPluginLog log,
             Configuration config,
-            Func<bool>? pvpStatsEnabled = null)
+            Func<bool>? pvpStatsEnabled = null,
+            Func<uint, DutyRecordingMode>? readDutyMode = null)
         {
             this.clientState = clientState;
             this.dutyState = dutyState;
@@ -74,6 +78,7 @@ namespace MentorRouletteTracker.DutyTracking
             this.log = log;
             this.config = config;
             this.pvpStatsEnabled = pvpStatsEnabled ?? (() => false);
+            this.readDutyMode = readDutyMode ?? DutyRecordingModeReader.Read;
 
             this.clientState.TerritoryChanged += OnTerritoryChanged;
             this.dutyState.DutyStarted += OnDutyStarted;
@@ -95,7 +100,7 @@ namespace MentorRouletteTracker.DutyTracking
             territoryCheckNeeded = false;
 
             CheckCurrentTerritory();
-            if (!pendingRestoreNeeded && dutyStartedWhileWaiting)
+            if (!pendingRestoreNeeded && !territoryCheckNeeded && dutyStartedWhileWaiting)
             {
                 if (current != null)
                     current.JoinedInProgress = false;
@@ -113,12 +118,23 @@ namespace MentorRouletteTracker.DutyTracking
             }
 
             var cfc = FindContentFinderCondition(clientState.TerritoryType);
+            var mode = cfc == null ? DutyRecordingMode.Standard : readDutyMode(clientState.TerritoryType);
+            if (mode == DutyRecordingMode.Unavailable)
+            {
+                territoryCheckNeeded = true;
+                return;
+            }
 
             if (current != null)
             {
                 var sameRecorder = IsRecordedByCurrentPlayer(current);
                 if (sameRecorder && cfc != null && current.DutyName == CapitalizeFirstLetter(cfc.Value.Name.ExtractText()))
                 {
+                    if (IsExcludedMode(mode, recordCurrentNpcDuty))
+                    {
+                        StopExcludedDuty();
+                        return;
+                    }
                     ActiveContentTypeId = cfc.Value.ContentType.RowId;
                     deathTrackingTerritory = clientState.TerritoryType;
                     return;
@@ -130,7 +146,8 @@ namespace MentorRouletteTracker.DutyTracking
                     FinalizeInterruptedDuty();
             }
 
-            if (cfc == null || !Armed || !config.TrackedContentTypeIds.Contains(cfc.Value.ContentType.RowId))
+            if (cfc == null || !Armed || IsExcludedMode(mode, config.RecordNpcDuties) ||
+                !config.TrackedContentTypeIds.Contains(cfc.Value.ContentType.RowId))
                 return;
 
             StartNewDuty(cfc.Value);
@@ -175,6 +192,14 @@ namespace MentorRouletteTracker.DutyTracking
                 // Completion can arrive before the first safe frame restores this duty.
                 current = pending;
                 pendingRestoreNeeded = false;
+                currentStartedThisSession = false;
+                recordCurrentNpcDuty = config.RecordNpcDuties;
+            }
+            if (current != null && deathTrackingTerritory == clientState.TerritoryType && CanCheckDutyState() &&
+                IsExcludedMode(readDutyMode(clientState.TerritoryType), recordCurrentNpcDuty))
+            {
+                StopExcludedDuty();
+                return;
             }
             CaptureNearbyPvpPlayers();
             FinalizeCurrent(completed: true);
@@ -210,11 +235,23 @@ namespace MentorRouletteTracker.DutyTracking
             if (territoryCheckNeeded)
                 OnTerritoryChanged(clientState.TerritoryType);
 
+            if (territoryCheckNeeded)
+                return;
+
             if (current == null)
                 return;
 
             if (!condition[ConditionFlag.BoundByDuty])
                 return;
+
+            var mode = readDutyMode(clientState.TerritoryType);
+            if (mode == DutyRecordingMode.Unavailable)
+                return;
+            if (IsExcludedMode(mode, recordCurrentNpcDuty))
+            {
+                StopExcludedDuty();
+                return;
+            }
 
             if (current.DutyType == "PvP" && !PvpTrackingAvailable)
                 return;
@@ -256,16 +293,27 @@ namespace MentorRouletteTracker.DutyTracking
             if (!CanCheckDutyState())
                 return;
 
+            var cfc = FindContentFinderCondition(clientState.TerritoryType);
+            var mode = cfc == null ? DutyRecordingMode.Standard : readDutyMode(clientState.TerritoryType);
+            if (mode == DutyRecordingMode.Unavailable)
+                return;
+
             pendingRestoreNeeded = false;
+            currentStartedThisSession = false;
+            recordCurrentNpcDuty = config.RecordNpcDuties;
             current = config.History.PendingDuty;
             if (current == null)
                 return;
 
-            var cfc = FindContentFinderCondition(clientState.TerritoryType);
             var sameRecorder = IsRecordedByCurrentPlayer(current);
             if (sameRecorder && condition[ConditionFlag.BoundByDuty] && cfc != null &&
                 current.DutyName == CapitalizeFirstLetter(cfc.Value.Name.ExtractText()))
             {
+                if (IsExcludedMode(mode, recordCurrentNpcDuty))
+                {
+                    FinalizeInterruptedDuty();
+                    return;
+                }
                 ActiveContentTypeId = cfc.Value.ContentType.RowId;
                 deathTrackingTerritory = clientState.TerritoryType;
             }
@@ -321,8 +369,10 @@ namespace MentorRouletteTracker.DutyTracking
                 return;
             }
             ActiveContentTypeId = duty.ContentType.RowId;
+            currentStartedThisSession = true;
+            recordCurrentNpcDuty = config.RecordNpcDuties;
             var dutyName = CapitalizeFirstLetter(duty.Name.ExtractText());
-            var dutyType = duty.ContentType.Value.Name.ExtractText();
+            var dutyType = DutyClassification.NormalizeType(duty.ContentType.Value.Name.ExtractText());
 
             if (dutyName.Contains("(Ultimate)", StringComparison.OrdinalIgnoreCase))
                 dutyType = "Ultimate Raids";
@@ -354,6 +404,27 @@ namespace MentorRouletteTracker.DutyTracking
             nextPartyRefresh = DateTime.MinValue;
             nextPvpPlayerRefresh = DateTime.MinValue;
             config.History.PendingDuty = current;
+            config.History.Save();
+        }
+
+        private static bool IsExcludedMode(DutyRecordingMode mode, bool recordNpcDuties) =>
+            mode == DutyRecordingMode.Explorer || (mode == DutyRecordingMode.NpcParty && !recordNpcDuties);
+
+        private void StopExcludedDuty()
+        {
+            if (!currentStartedThisSession)
+            {
+                FinalizeInterruptedDuty();
+                return;
+            }
+            // Mode flags can arrive after entry. Drop only this visit's new pending record.
+            current = null;
+            config.History.PendingDuty = null;
+            deathTrackingTerritory = null;
+            ActiveContentTypeId = null;
+            previousDeathStates.Clear();
+            dutyStartedWhileWaiting = false;
+            territoryCheckNeeded = false;
             config.History.Save();
         }
 

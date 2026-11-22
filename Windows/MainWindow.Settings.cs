@@ -60,7 +60,7 @@ namespace MentorRouletteTracker
                 (6, "PvP"),
                 (21, "Deep Dungeons"),
                 (28, "Ultimate Raids"),
-                (30, "V&C Dungeon Finder"),
+                (30, "V&C Dungeon"),
                 (37, "Chaotic Alliance Raid")
             };
 
@@ -86,6 +86,13 @@ namespace MentorRouletteTracker
                         ImGui.PopTextWrapPos();
                     }
 
+                    ImGui.Spacing();
+                    var recordNpcDuties = config.RecordNpcDuties;
+                    if (ImGui.Checkbox("Record Trust and Duty Support runs", ref recordNpcDuties))
+                    {
+                        config.RecordNpcDuties = recordNpcDuties;
+                        config.Save();
+                    }
                     ImGui.Spacing();
                     ImGui.TextDisabled("Choose which duties to record.");
                     ImGui.Spacing();

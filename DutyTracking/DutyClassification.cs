@@ -13,8 +13,10 @@ internal static class DutyClassification
     {
         "Astragalos", "Hidden Gorge"
     };
+    internal static string NormalizeType(string dutyType) =>
+        string.Equals(dutyType, "V&C Dungeon Finder", StringComparison.OrdinalIgnoreCase) ? "V&C Dungeon" : dutyType;
     internal static string DutyType(DutyRecord record) =>
-        record.DutyName.Contains("(Ultimate)", StringComparison.OrdinalIgnoreCase) ? "Ultimate Raids" : record.DutyType;
+        record.DutyName.Contains("(Ultimate)", StringComparison.OrdinalIgnoreCase) ? "Ultimate Raids" : NormalizeType(record.DutyType);
     internal static string DisplayType(DutyRecord record) => record.DutyType == "PvP" ? Mode(record) switch
     {
         PvpMode.Frontline => "PvP (Frontlines)",
