@@ -255,6 +255,9 @@ namespace MentorRouletteTracker
 
                                         ImGui.Separator();
 
+                                        if ((warnings.Length > 0 || partial) && ImGui.MenuItem("Fix missing data"))
+                                            StartRecordRepair(r);
+
                                         if (ImGui.MenuItem("Edit record"))
                                         {
                                             StartEditingRecord(r);
@@ -343,10 +346,10 @@ namespace MentorRouletteTracker
                     return;
                 }
 
-                ImGui.Text("Edit duty record");
+                ImGui.Text(editRepairMode ? "Fix missing recording data" : "Edit duty record");
                 ImGui.Separator();
 
-                var height = Math.Min(ImGui.GetIO().DisplaySize.Y * 0.6f, ImGui.GetFontSize() * (editColumns.Count * 2 + 6));
+                var height = Math.Min(ImGui.GetIO().DisplaySize.Y * 0.6f, ImGui.GetFontSize() * (editRepairMode ? 32 : editColumns.Count * 2 + 6));
                 try
                 {
                     if (ImGui.BeginChild("RecordEditFields", new Vector2(Math.Min(ImGui.GetFontSize() * 34,

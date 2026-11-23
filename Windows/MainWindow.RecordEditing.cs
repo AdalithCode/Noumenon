@@ -36,6 +36,8 @@ public partial class MainWindow
 
     private void PrepareRecordEdit(DutyRecord record)
     {
+        editRepairMode = false;
+        repairScoreTexts.Clear();
         editDraft = JsonSerializer.Deserialize<DutyRecord>(JsonSerializer.Serialize(record))!;
         editColumns = TableColumnOptions["Records"].Where((_, i) => IsTableColumnVisible("Records", i))
             .Select(column => column.Id).ToHashSet();
@@ -79,6 +81,11 @@ public partial class MainWindow
         if (editDraft == null)
             return;
         var draft = editDraft;
+        if (editRepairMode)
+        {
+            DrawRecordRepairFields(draft);
+            return;
+        }
         if (EditShows("duty")) EditText("Duty", draft.DutyName, value => draft.DutyName = value);
         if (EditShows("type")) EditChoice("Type", DutyClassification.NormalizeType(draft.DutyType),
             ["Dungeons", "Guildhests", "Trials", "Extreme Trials", "Raids", "Savage Raids", "Ultimate Raids",
@@ -206,6 +213,7 @@ public partial class MainWindow
         if (config.History.ChangeVersion != editHistoryVersion)
             return Error("History changed while you were editing. Cancel and reopen the editor to get the latest values.");
         var draft = editDraft;
+        if (editRepairMode) return TrySaveRecordRepair(recordToEdit, draft);
         if (string.IsNullOrWhiteSpace(draft.DutyName)) return Error("Give the duty a name.");
         if (EditShows("type") && DutyClassification.DutyType(draft) != draft.DutyType)
             return Error("An (Ultimate) duty name uses Ultimate Raids. Correct the duty name too if its type is wrong.");

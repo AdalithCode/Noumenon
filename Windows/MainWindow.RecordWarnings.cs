@@ -6,7 +6,7 @@ namespace MentorRouletteTracker;
 
 public partial class MainWindow
 {
-    private static readonly Vector4 RecordWarningColor = new(1f, 0.75f, 0.3f, 1f);
+    private static readonly Vector4 RecordWarningColor = new(1f, 0.3f, 0.3f, 1f);
 
     private static bool IsPartialPvpScoreboard(DutyRecord record) => record.DutyType == "PvP" &&
         record.PvPLookupFinished && (record.PvPRosterComplete != true || !record.PvPCombatStatsComplete ||
@@ -44,7 +44,7 @@ public partial class MainWindow
         return warnings?.ToArray() ?? Array.Empty<string>();
     }
 
-    private static void DrawRecordDataWarnings(DutyRecord record)
+    private void DrawRecordDataWarnings(DutyRecord record)
     {
         var warnings = GetRecordDataWarnings(record);
         var partial = IsPartialPvpScoreboard(record);
@@ -60,7 +60,7 @@ public partial class MainWindow
         try
         {
             foreach (var warning in warnings)
-                ImGui.TextUnformatted("- " + warning);
+                ImGui.TextColored(RecordWarningColor, "- " + warning);
             if (partial)
                 ImGui.TextUnformatted("Available stats are saved. Automatic lookups have finished; missing entries stay unknown.");
             else if (record.DutyType == "PvP" && !record.PvPLookupFinished)
@@ -70,6 +70,8 @@ public partial class MainWindow
         {
             ImGui.PopTextWrapPos();
         }
+        if (ImGui.Button("Fix missing data"))
+            StartRecordRepair(record);
         ImGui.Spacing();
         ImGui.Separator();
     }
