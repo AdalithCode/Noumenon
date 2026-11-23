@@ -40,6 +40,24 @@ anything, and PvE still works.
 PvP results can take a few minutes to appear. Damage, healing, damage taken, and
 their per-minute columns are available in Settings.
 
+## Known issues and limits
+
+- **English only.** Use the English game client. Other languages aren't supported.
+- **NA only.** World and datacenter grouping is built around Aether, Crystal,
+  Dynamis, and Primal. Other regions aren't supported.
+- **Death counts can miss things.** Tracking depends on what your client sees.
+  Deaths outside object range may be missed; that behavior still needs live testing.
+- **PvP scoreboards can be partial.** Available stats are kept, but some players or
+  scores may stay unknown after automatic lookups finish.
+- **PvP edits can be updated later.** PvP Tracker may update manually edited values
+  if more results arrive.
+
+Actual crash/disconnect recovery still needs live testing. The automated recovery
+checks passed, but that isn't the same as testing a real game crash or disconnect.
+
+Found something else? [Report it in Issues](https://github.com/AdalithCode/Noumenon/issues)
+with what happened and how to reproduce it if you can.
+
 ## History and updates
 
 History is stored locally. CSV export and **Clear all records** are under
