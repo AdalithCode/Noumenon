@@ -63,6 +63,8 @@ namespace MentorRouletteTracker
             this.tracker = tracker;
             this.exportDirectory = exportDirectory;
             this.objectTable = objectTable;
+            showIntroduction = !config.HasSeenIntroduction;
+            IsOpen = showIntroduction;
 
             var datacenters = new (string Name, string[] Worlds)[]
             {
@@ -105,10 +107,15 @@ namespace MentorRouletteTracker
             SaveAppearanceChanges();
         }
 
-        public override void OnClose() => SaveAppearanceChanges();
+        public override void OnClose()
+        {
+            if (showIntroduction && config.StorageAvailable) FinishIntroduction();
+            SaveAppearanceChanges();
+        }
 
         public void OpenSettings()
         {
+            showIntroduction = false;
             openSettings = true;
             openDutyHistory = false;
             IsOpen = true;
@@ -116,6 +123,7 @@ namespace MentorRouletteTracker
 
         public void OpenLastDuty()
         {
+            showIntroduction = false;
             if (!config.StorageAvailable)
             {
                 IsOpen = true;
@@ -136,6 +144,7 @@ namespace MentorRouletteTracker
 
         public void OpenDutyHistory(string dutyName, bool fullRunsOnly = false)
         {
+            showIntroduction = false;
             openSettings = false;
             if (string.IsNullOrWhiteSpace(dutyName))
                 return;
@@ -206,6 +215,12 @@ namespace MentorRouletteTracker
                 ImGui.TextWrapped("If the database is missing, unload Noumenon and restore it from a backup. Then reload the plugin.");
                 ImGui.TextWrapped($"Database: {Path.Combine(exportDirectory, "history.sqlite")}");
                 ImGui.TextWrapped("For other storage errors, check the Dalamud log before restoring files.");
+                return;
+            }
+
+            if (showIntroduction)
+            {
+                DrawIntroduction();
                 return;
             }
 

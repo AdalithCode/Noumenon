@@ -323,6 +323,7 @@ namespace MentorRouletteTracker
 
         private void StartEditingRecord(DutyRecord record)
         {
+            showIntroduction = false;
             recordToEdit = record;
             PrepareRecordEdit(record);
             editError = string.Empty;

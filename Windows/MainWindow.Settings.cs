@@ -312,6 +312,22 @@ namespace MentorRouletteTracker
                 }
             }
 
+            ImGui.Spacing();
+            if (BeginSettingsSection("Help"))
+            {
+                try
+                {
+                    if (ImGui.Button("Show introduction"))
+                        showIntroduction = true;
+                    if (ImGui.Button("Open Noumenon repository"))
+                        Dalamud.Utility.Util.OpenLink("https://github.com/AdalithCode/Noumenon");
+                    if (ImGui.Button("Report an issue"))
+                        Dalamud.Utility.Util.OpenLink("https://github.com/AdalithCode/Noumenon/issues");
+                    ImGui.TextWrapped("Found a bug or have an idea? Post it in the repository's Issues tab. For bugs, include what happened and how to reproduce it if you can.");
+                }
+                finally { EndSettingsSection(); }
+            }
+
             settingsExpansion = null;
         }
 
@@ -362,9 +378,10 @@ namespace MentorRouletteTracker
                 ImGui.PopStyleColor();
             }
             ImGui.TextWrapped(enabled
-                ? "PvP Tracker provides player rosters, match scores, and results."
-                : "Enable PvP Tracker in /xlplugins to record PvP.");
-            if (ImGui.SmallButton("PvP Tracker repository"))
+                ? "PvP Tracker supplies each match's player list, scores, and results to Noumenon."
+                : "Enable PvP Tracker in /xlplugins to record PvP matches. Its repository has installation instructions.");
+            if (ImGui.Button("Open PvP Tracker repository", new Vector2(
+                    Math.Min(ImGui.GetContentRegionAvail().X, ImGui.GetFontSize() * 24), ImGui.GetFrameHeight() * 1.4f)))
                 Dalamud.Utility.Util.OpenLink("https://github.com/wrath16/PvpStats");
             ImGui.Spacing();
         }

@@ -8,6 +8,7 @@ namespace MentorRouletteTracker
     public class Configuration : IPluginConfiguration
     {
         public int Version { get; set; } = 1;
+        public bool HasSeenIntroduction { get; set; }
         public bool RecordDuties { get; set; } = true;
         public bool RecordNpcDuties { get; set; } = true;
         [Newtonsoft.Json.JsonProperty(ObjectCreationHandling = Newtonsoft.Json.ObjectCreationHandling.Replace)]
@@ -89,10 +90,12 @@ namespace MentorRouletteTracker
 
         internal void ResetPreferences()
         {
+            var hasSeenIntroduction = HasSeenIntroduction;
             var defaults = new Configuration();
             foreach (var property in typeof(Configuration).GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
                 if (property.CanRead && property.CanWrite)
                     property.SetValue(this, property.GetValue(defaults));
+            HasSeenIntroduction = hasSeenIntroduction;
             Save();
         }
 
