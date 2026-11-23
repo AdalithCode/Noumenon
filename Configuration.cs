@@ -18,6 +18,7 @@ namespace MentorRouletteTracker
         public bool TrackAllianceMembers { get; set; } = true;
         public bool TrackPvpEnemies { get; set; } = true;
         public bool UseMostRecentPlayerRace { get; set; }
+        public int RecentPerformanceRuns { get; set; } = 10;
         public bool IncludeSelfInStatistics { get; set; }
         public string EncounterTargetRace { get; set; } = "Lalafell";
         public string EncounterTargetGender { get; set; } = string.Empty;

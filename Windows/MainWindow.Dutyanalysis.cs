@@ -22,6 +22,8 @@ namespace MentorRouletteTracker
         {
             public (int Column, bool Ascending)? Sort { get; set; }
             public List<DutyAnalysisRow>? SortedRows { get; set; }
+            public List<DutyRecord> FullRuns { get; init; } = new();
+            public DutyPerformance? Performance { get; set; }
         }
 
         private DutyAnalysisData GetDutyAnalysisData()
@@ -52,7 +54,10 @@ namespace MentorRouletteTracker
                 fullRuns.Count == 0 ? null : TimeSpan.FromSeconds(fullRuns.Average(record => record.TimeInDuty.TotalSeconds)),
                 records.Count == 0 ? 0 : records.Average(record => record.WipeCount),
                 records.Count(record => record.JoinedInProgress), typeCounts, mostCommon, heatmap,
-                BuildDutyAnalysisRows(records));
+                BuildDutyAnalysisRows(records))
+            {
+                FullRuns = fullRuns
+            };
             dutyAnalysisFilterKey = filterKey;
             dutyAnalysisHistoryVersion = config.History.ChangeVersion;
             dutyAnalysisRecordCount = config.History.Records.Count;
@@ -99,6 +104,11 @@ namespace MentorRouletteTracker
                         ImGui.Spacing();
 
                         DrawDutiesHeatmap(data.Heatmap);
+                        ImGui.Spacing();
+                        ImGui.Separator();
+                        ImGui.Spacing();
+
+                        DrawRecentPerformance(data);
                         ImGui.Spacing();
                         ImGui.Separator();
                         ImGui.Spacing();
@@ -369,22 +379,19 @@ namespace MentorRouletteTracker
             }
         }
 
-        private double? AverageKnownDeathsPerRun(IEnumerable<DutyRecord> records)
+        private double? KnownDeathsForRun(DutyRecord record)
         {
             var localPlayerName = objectTable.LocalPlayer?.Name.TextValue;
-            return records.Select(record =>
-            {
-                var deaths = record.Party
-                    .Where(player => !string.IsNullOrWhiteSpace(player.Name) && MatchesPlayerFilters(player) &&
-                        (config.IncludeSelfInStatistics || !IsRecordingPlayer(record, player, localPlayerName)))
-                    .Select(player => EffectiveDeaths(record, player))
-                    .ToList();
-
-                return deaths.Count > 0 && deaths.All(count => count.HasValue)
-                    ? (double?)deaths.Sum(count => count.GetValueOrDefault())
-                    : null;
-            }).Average();
+            var deaths = record.Party
+                .Where(player => !string.IsNullOrWhiteSpace(player.Name) && MatchesPlayerFilters(player) &&
+                    (config.IncludeSelfInStatistics || !IsRecordingPlayer(record, player, localPlayerName)))
+                .Select(player => EffectiveDeaths(record, player)).ToList();
+            return deaths.Count > 0 && deaths.All(count => count.HasValue)
+                ? (double?)deaths.Sum(count => count.GetValueOrDefault()) : null;
         }
+
+        private double? AverageKnownDeathsPerRun(IEnumerable<DutyRecord> records) =>
+            records.Select(KnownDeathsForRun).Average();
 
         private sealed record DutyAnalysisRow(
             string Duty, int Runs, int? Deaths, double? AverageDeaths, int TotalWipes,
