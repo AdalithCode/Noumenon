@@ -66,29 +66,17 @@ you don't know blank.
 ## Screenshots
 
 ### Records and duty details
-
-> Screenshot goes here: a few saved duties with one PvE duty open, showing the
-> party, death counts, notes, and an expanded pull in the death timeline.
+<img width="1178" height="531" alt="image" src="https://github.com/user-attachments/assets/7aff110a-25bf-4993-a4ed-fc3df44ae073" />
 
 ### People and filters
-
-> Screenshot goes here: the People tab with the job/world filters open and a
-> player's duty history alongside it. Use a player you've encountered a few times.
+<img width="1170" height="753" alt="image" src="https://github.com/user-attachments/assets/a73c2580-7bb6-4565-8f53-229e392a8593" />
 
 ### Statistics
+<img width="1176" height="511" alt="image" src="https://github.com/user-attachments/assets/418a15d5-152f-4424-bff0-42b009936e2d" />
 
-> Screenshot goes here: race or home-world statistics with a few useful columns
-> enabled. Keep the selection readable rather than showing every possible column.
 
 ### Duty Analysis
-
-> Screenshot goes here: Duties by day and time with Recent performance below it.
-> Use more than 10 matching full runs so the recent and overall values can differ.
-
-### PvP records
-
-> Screenshot goes here: a completed Frontline record showing side, damage, kills,
-> deaths, assists, and placement. Include damage taken/healing if they fit cleanly.
+<img width="1173" height="770" alt="image" src="https://github.com/user-attachments/assets/f1ed6fe9-ee48-44c8-92cf-9ddf5f7cd3e7" />
 
 ## History and updates
 
