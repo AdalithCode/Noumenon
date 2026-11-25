@@ -65,7 +65,7 @@ public partial class MainWindow
             var ascending = specs.SpecsCount == 0 || specs.Specs.SortDirection == ImGuiSortDirection.Ascending;
             var players = SortTableRows(record.Party, player => column switch
             {
-                0 => player.Name, 1 => player.World, 2 => player.Job,
+                0 => DisplayPlayerName(player), 1 => DisplayPlayerWorld(player.World), 2 => player.Job,
                 3 => player.PvPIsEnemy.HasValue ? (player.PvPIsEnemy.Value ? 1 : 0) : (int?)null,
                 4 => player.PvPDamageDealt, 5 => player.PvPKills, 6 => EffectiveDeaths(record, player),
                 7 => player.PvPAssists, 8 => player.Race, 9 => player.Gender, 10 => GetPlayerStatus(player),
@@ -75,15 +75,15 @@ public partial class MainWindow
                 14 => PvpDamagePerMinute(record, player),
                 15 => PvpRatePerMinute(record, player.PvPDamageTaken),
                 16 => PvpRatePerMinute(record, player.PvPHealingDone),
-                _ => player.Name
-            }, ascending, player => player.Name);
+                _ => DisplayPlayerName(player)
+            }, ascending, player => DisplayPlayerName(player));
             specs.SpecsDirty = false;
             foreach (var player in players)
             {
                 ImGui.TableNextRow();
                 var self = player.Name == record.RecorderName && player.World == record.RecorderWorld;
-                DrawTableCell(0, player.Name + (self ? " (You)" : ""));
-                DrawTableCell(1, player.World);
+                DrawTableCell(0, DisplayPlayerName(player) + (self ? " (You)" : ""));
+                DrawTableCell(1, DisplayPlayerWorld(player.World));
                 DrawTableCell(2, player.Job);
                 DrawTableCell(3, self ? "You" : PvpSideLabel(player));
                 DrawTableCell(4, player.PvPDamageDealt?.ToString("N0") ?? "-");

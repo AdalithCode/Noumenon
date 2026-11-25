@@ -44,7 +44,7 @@ public partial class MainWindow
                     }
                     else ImGui.TextWrapped("The start wasn't observed. Times below are from duty entry.");
                     if (deaths.Count == 0) ImGui.TextDisabled("No deaths recorded for this pull.");
-                    else DrawDeathRows("PullDeaths", deaths, pull.Started);
+                    else DrawDeathRows("PullDeaths", deaths, pull.Started, record);
                 }
                 finally { ImGui.TreePop(); }
             }
@@ -54,7 +54,7 @@ public partial class MainWindow
         var unassigned = record.DeathTimestamps.Where(death => death.PullNumber == null || death.BeforePull).ToList();
         if (unassigned.Count > 0 && ImGui.TreeNodeEx($"Unassigned deaths ({unassigned.Count})", ImGuiTreeNodeFlags.SpanAvailWidth))
         {
-            try { DrawDeathRows("UnassignedDeaths", unassigned); }
+            try { DrawDeathRows("UnassignedDeaths", unassigned, record: record); }
             finally { ImGui.TreePop(); }
         }
 
@@ -66,7 +66,7 @@ public partial class MainWindow
 
         if (record.DeathTimestamps.Count > 0 && ImGui.TreeNodeEx("All deaths (duty time)", ImGuiTreeNodeFlags.SpanAvailWidth))
         {
-            try { DrawDeathRows("DutyDeathTimeline", record.DeathTimestamps); }
+            try { DrawDeathRows("DutyDeathTimeline", record.DeathTimestamps, record: record); }
             finally { ImGui.TreePop(); }
         }
         ImGui.Spacing();
@@ -76,7 +76,7 @@ public partial class MainWindow
         ? $"{(long)time.TotalHours:00}:{time.Minutes:00}:{time.Seconds:00}"
         : $"{time.Minutes:00}:{time.Seconds:00}";
 
-    private void DrawDeathRows(string id, IEnumerable<DeathTimestamp> deaths, TimeSpan? pullStart = null)
+    private void DrawDeathRows(string id, IEnumerable<DeathTimestamp> deaths, TimeSpan? pullStart = null, DutyRecord? record = null)
     {
         if (!BeginStyledTable(id, 2, ImGuiTableFlags.RowBg | ImGuiTableFlags.SizingStretchProp))
             return;
@@ -92,8 +92,9 @@ public partial class MainWindow
                 var time = death.Elapsed - (pullStart ?? TimeSpan.Zero);
                 ImGui.TextUnformatted(DeathTime(time < TimeSpan.Zero ? TimeSpan.Zero : time));
                 ImGui.TableSetColumnIndex(1);
-                ImGui.TextUnformatted(string.IsNullOrWhiteSpace(death.World)
-                    ? death.Name : $"{death.Name}@{death.World}");
+                var job = config.AnonymousMode && config.AnonymousUseJobs
+                    ? record?.Party.FirstOrDefault(player => player.Name == death.Name && player.World == death.World)?.Job : null;
+                ImGui.TextUnformatted(DisplayPlayerIdentity(death.Name, death.World, job));
             }
         }
         finally { EndStyledTable(); }

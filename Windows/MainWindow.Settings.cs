@@ -241,6 +241,12 @@ namespace MentorRouletteTracker
             }
 
             ImGui.Spacing();
+            if (BeginSettingsSection("Privacy"))
+            {
+                try { DrawPrivacySettings(); }
+                finally { EndSettingsSection(); }
+            }
+            ImGui.Spacing();
             if (BeginSettingsSection("Appearance"))
             {
                 try
@@ -483,6 +489,19 @@ namespace MentorRouletteTracker
                 }
             }
             ImGui.Spacing();
+            var anonymousCsv = config.AnonymousMode || config.AnonymizeCsvExports;
+            ImGui.BeginDisabled(config.AnonymousMode);
+            try
+            {
+                if (ImGui.Checkbox("Anonymize CSV exports", ref anonymousCsv))
+                {
+                    config.AnonymizeCsvExports = anonymousCsv;
+                    config.Save();
+                }
+            }
+            finally { ImGui.EndDisabled(); }
+            if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                ImGui.SetTooltip("Replaces player names in new CSV files. Anonymous mode always anonymizes exports. Existing files and backups keep their original data.");
             ImGui.BeginDisabled(csvExportTask != null);
             try
             {

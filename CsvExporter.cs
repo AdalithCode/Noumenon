@@ -15,10 +15,15 @@ namespace MentorRouletteTracker
             bool JoinedInProgress, int WipeCount, int LalafellCount, string PlayerJob,
             TimeSpan TimeInDuty, bool Completed, (string Name, string Job, string Race)[] Party);
 
-        internal static Row[] Capture(IEnumerable<DutyRecord> records) => records.Select(record => new Row(
+        internal static Row[] Capture(IEnumerable<DutyRecord> records) => CaptureRows(records, (_, player) => player.Name);
+
+        internal static Row[] CaptureAnonymous(IEnumerable<DutyRecord> records, Func<DutyRecord, PartyMemberSnapshot, string> playerName) =>
+            CaptureRows(records, playerName);
+
+        private static Row[] CaptureRows(IEnumerable<DutyRecord> records, Func<DutyRecord, PartyMemberSnapshot, string> playerName) => records.Select(record => new Row(
             record.Timestamp, record.DutyName, DutyClassification.NormalizeType(record.DutyType), record.JoinedInProgress,
             record.WipeCount, record.LalafellCount, record.PlayerJob, record.TimeInDuty,
-            record.Completed, record.Party.Select(player => (player.Name, player.Job, player.Race)).ToArray())).ToArray();
+            record.Completed, record.Party.Select(player => (playerName(record, player), player.Job, player.Race)).ToArray())).ToArray();
 
         internal static void ExportSnapshot(IEnumerable<Row> records, string filePath)
         {

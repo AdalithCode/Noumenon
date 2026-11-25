@@ -163,8 +163,8 @@ namespace MentorRouletteTracker
                     {
                         people = SortTableRows(people, player => sortColumn switch
                         {
-                            0 => player.Name,
-                            1 => player.World,
+                            0 => DisplayPlayerName(player.Name, player.World),
+                            1 => DisplayPlayerWorld(player.World),
                             2 => player.Race,
                             3 => player.Gender,
                             4 => player.TimesSeen,
@@ -183,8 +183,8 @@ namespace MentorRouletteTracker
                             17 => player.TeammateEncounters,
                             18 => player.EnemyEncounters,
                             >= 19 and <= 32 => PvpStatisticValue(player.Pvp, sortColumn - 16),
-                            _ => player.Name
-                        }, direction == ImGuiSortDirection.Ascending, player => player.Name);
+                            _ => DisplayPlayerName(player.Name, player.World)
+                        }, direction == ImGuiSortDirection.Ascending, player => DisplayPlayerName(player.Name, player.World));
                         data.People = people;
                         data.PeopleSort = (sortColumn, (int)direction);
                         sortSpecs.SpecsDirty = false;
@@ -201,13 +201,13 @@ namespace MentorRouletteTracker
                                 var player = people[i];
                                 ImGui.TableNextRow();
                                 SetConfiguredColumnIndex(0);
-                                if (ImGui.Selectable($"{player.Name}###person{player.Name}@{player.World}"))
+                                if (ImGui.Selectable($"{DisplayPlayerName(player.Name, player.World)}###person{player.Name}@{player.World}"))
                                 {
                                     historyPlayerName = player.Name;
                                     historyPlayerWorld = player.World;
                                     showPlayerHistory = true;
                                 }
-                                DrawTableCell(1, player.World);
+                                DrawTableCell(1, DisplayPlayerWorld(player.World));
                                 DrawTableCell(2, player.Race);
                                 DrawTableCell(3, player.Gender);
                                 DrawTableCell(4, player.TimesSeen.ToString());
@@ -250,7 +250,7 @@ namespace MentorRouletteTracker
             {
                 if (ImGui.Begin("Player Duty History###DutyTrackerPlayerHistory", ref isOpen))
                 {
-                    ImGui.TextUnformatted($"{historyPlayerName}@{historyPlayerWorld}");
+                    ImGui.TextUnformatted(DisplayPlayerIdentity(historyPlayerName ?? string.Empty, historyPlayerWorld ?? string.Empty));
                     ImGui.TextDisabled("Duties recorded with this player. Filters still apply.");
                     ImGui.Separator();
                     ImGui.Spacing();

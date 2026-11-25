@@ -70,8 +70,14 @@ public partial class MainWindow
         {
             ImGui.PopTextWrapPos();
         }
-        if (ImGui.Button("Fix missing data"))
-            StartRecordRepair(record);
+        ImGui.BeginDisabled(config.AnonymousMode);
+        try
+        {
+            if (ImGui.Button("Fix missing data")) StartRecordRepair(record);
+        }
+        finally { ImGui.EndDisabled(); }
+        if (config.AnonymousMode && ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+            ImGui.SetTooltip("Turn off Anonymous mode in Settings to edit player data.");
         ImGui.Spacing();
         ImGui.Separator();
     }

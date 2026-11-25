@@ -78,6 +78,11 @@ public partial class MainWindow
 
     private void DrawRecordEditFields()
     {
+        if (config.AnonymousMode)
+        {
+            ImGui.TextWrapped("Turn off Anonymous mode in Settings to edit player data.");
+            return;
+        }
         if (editDraft == null)
             return;
         var draft = editDraft;
@@ -208,6 +213,7 @@ public partial class MainWindow
     private bool TrySaveEditedRecord()
     {
         bool Error(string message) { editError = message; return false; }
+        if (config.AnonymousMode) return Error("Turn off Anonymous mode in Settings to edit player data.");
         if (recordToEdit == null || editDraft == null || !config.History.Records.Contains(recordToEdit))
             return Error("This record is no longer in your history.");
         if (config.History.ChangeVersion != editHistoryVersion)

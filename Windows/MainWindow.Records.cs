@@ -255,13 +255,18 @@ namespace MentorRouletteTracker
 
                                         ImGui.Separator();
 
-                                        if ((warnings.Length > 0 || partial) && ImGui.MenuItem("Fix missing data"))
-                                            StartRecordRepair(r);
-
-                                        if (ImGui.MenuItem("Edit record"))
+                                        ImGui.BeginDisabled(config.AnonymousMode);
+                                        try
                                         {
-                                            StartEditingRecord(r);
+                                            if ((warnings.Length > 0 || partial) && ImGui.MenuItem("Fix missing data"))
+                                                StartRecordRepair(r);
+
+                                            if (ImGui.MenuItem("Edit record"))
+                                            {
+                                                StartEditingRecord(r);
+                                            }
                                         }
+                                        finally { ImGui.EndDisabled(); }
 
                                         if (ImGui.MenuItem("Delete record"))
                                         {
@@ -323,6 +328,7 @@ namespace MentorRouletteTracker
 
         private void StartEditingRecord(DutyRecord record)
         {
+            if (config.AnonymousMode) return;
             showIntroduction = false;
             recordToEdit = record;
             PrepareRecordEdit(record);
@@ -341,6 +347,13 @@ namespace MentorRouletteTracker
 
             try
             {
+                if (config.AnonymousMode)
+                {
+                    ImGui.TextWrapped("Turn off Anonymous mode in Settings to edit player data.");
+                    if (ImGui.Button("Close")) ImGui.CloseCurrentPopup();
+                    return;
+                }
+
                 if (recordToEdit == null)
                 {
                     ImGui.CloseCurrentPopup();
@@ -592,6 +605,10 @@ namespace MentorRouletteTracker
                                 var sortedParty = SortPartyMembers(r,
                                     sortSpecs.SpecsCount > 0 ? ConfiguredSortColumn(sortSpecs.Specs.ColumnIndex) : -1,
                                     sortSpecs.SpecsCount == 0 || sortSpecs.Specs.SortDirection == ImGuiSortDirection.Ascending);
+                                if (config.AnonymousMode && sortSpecs.SpecsCount > 0 &&
+                                    ConfiguredSortColumn(sortSpecs.Specs.ColumnIndex) == 0)
+                                    sortedParty = SortTableRows(sortedParty, member => DisplayPlayerName(member),
+                                        sortSpecs.Specs.SortDirection == ImGuiSortDirection.Ascending, member => DisplayPlayerName(member));
                                 if (sortSpecs.SpecsCount > 0)
                                     sortSpecs.SpecsDirty = false;
 
@@ -604,15 +621,15 @@ namespace MentorRouletteTracker
                                     if (IsRecordingPlayer(r, member, localPlayerName))
                                     {
                                         ImGui.TextUnformatted(
-                                            $"{member.Name} (You)");
+                                            $"{DisplayPlayerName(member)} (You)");
                                     }
                                     else
                                     {
-                                        ImGui.TextUnformatted(member.Name);
+                                        ImGui.TextUnformatted(DisplayPlayerName(member));
                                     }
 
                                     ImGui.TableSetColumnIndex(1);
-                                    ImGui.TextUnformatted(member.World);
+                                    ImGui.TextUnformatted(DisplayPlayerWorld(member.World));
 
                                     ImGui.TableSetColumnIndex(2);
                                     ImGui.TextUnformatted(member.Job);
@@ -658,18 +675,22 @@ namespace MentorRouletteTracker
 
                     DrawDeathTimeline(r);
 
-                    if (ImGuiComponents.IconButton("EditDutyNote", FontAwesomeIcon.Edit))
+                    if (config.AnonymousMode) ImGui.TextDisabled("Notes hidden in Anonymous mode.");
+                    else
                     {
-                        noteRecord = r;
-                        noteDraft = r.Note ?? string.Empty;
-                        showNoteWindow = true;
+                        if (ImGuiComponents.IconButton("EditDutyNote", FontAwesomeIcon.Edit))
+                        {
+                            noteRecord = r;
+                            noteDraft = r.Note ?? string.Empty;
+                            showNoteWindow = true;
+                        }
+
+                        if (ImGui.IsItemHovered())
+                            ImGui.SetTooltip("Edit note");
+
+                        ImGui.SameLine();
+                        ImGui.TextWrapped($"Notes: {r.Note}");
                     }
-
-                    if (ImGui.IsItemHovered())
-                        ImGui.SetTooltip("Edit note");
-
-                    ImGui.SameLine();
-                    ImGui.TextWrapped($"Notes: {r.Note}");
                 }
             }
             finally
@@ -687,7 +708,7 @@ namespace MentorRouletteTracker
 
         private void DrawNoteWindow()
         {
-            if (!showNoteWindow || noteRecord == null)
+            if (config.AnonymousMode || !showNoteWindow || noteRecord == null)
                 return;
 
             ImGui.SetNextWindowSize(

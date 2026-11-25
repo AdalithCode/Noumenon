@@ -33,7 +33,8 @@ namespace MentorRouletteTracker
                 globalDutySearchText.Trim(),
                 selectedTimeRange.ToString(),
                 customStartDate.Date.ToString("yyyyMMdd"),
-                customEndDate.Date.ToString("yyyyMMdd"), EncounterTargetRace, EncounterTargetGender);
+                customEndDate.Date.ToString("yyyyMMdd"), EncounterTargetRace, EncounterTargetGender,
+                config.AnonymousMode.ToString(), config.AnonymousUseJobs.ToString(), config.AnonymousHideWorlds.ToString());
 
             if (milestoneHistoryVersion != config.History.ChangeVersion ||
                 milestoneRecordCount != config.History.Records.Count ||
@@ -163,14 +164,14 @@ namespace MentorRouletteTracker
             {
                 var best = personalPvp.Where(entry => score(entry.Player).HasValue).MaxBy(entry => score(entry.Player));
                 return best == null ? new MilestoneResult("N/A") : new MilestoneResult(
-                    $"{score(best.Player):N0} {unit} — {best.Player.Name}@{best.Player.World} — {best.Record.DutyName} — {best.Record.Timestamp:yyyy-MM-dd HH:mm}", best.Record);
+                    $"{score(best.Player):N0} {unit} — {DisplayPlayerIdentity(best.Player.Name, best.Player.World, best.Player.Job)} — {best.Record.DutyName} — {best.Record.Timestamp:yyyy-MM-dd HH:mm}", best.Record);
             }
             MilestoneResult PersonalRateBest(Func<PartyMemberSnapshot, long?> score, string unit)
             {
                 var best = personalPvp.Where(entry => PvpRatePerMinute(entry.Record, score(entry.Player)).HasValue)
                     .MaxBy(entry => PvpRatePerMinute(entry.Record, score(entry.Player)));
                 return best == null ? new MilestoneResult("N/A") : new MilestoneResult(
-                    $"{PvpRatePerMinute(best.Record, score(best.Player)):N0} {unit} / min — {best.Player.Name}@{best.Player.World} — {best.Record.DutyName} — {best.Record.Timestamp:yyyy-MM-dd HH:mm}", best.Record);
+                    $"{PvpRatePerMinute(best.Record, score(best.Player)):N0} {unit} / min — {DisplayPlayerIdentity(best.Player.Name, best.Player.World, best.Player.Job)} — {best.Record.DutyName} — {best.Record.Timestamp:yyyy-MM-dd HH:mm}", best.Record);
             }
             var lifetimePvpRows = new List<(string Label, MilestoneResult Value)>
             {
@@ -227,7 +228,7 @@ namespace MentorRouletteTracker
             var completed = records.Where(r => r.Completed).ToList();
 
             string Duty(DutyRecord r) => $"{r.DutyName} — {r.Timestamp:yyyy-MM-dd HH:mm}";
-            string Player(MilestoneEncounter e) => $"{e.Player.Name}@{e.Player.World}";
+            string Player(MilestoneEncounter e) => DisplayPlayerIdentity(e.Player.Name, e.Player.World, e.Player.Job);
             bool MatchesStatus(PartyMemberSnapshot player, string status) =>
                 status == "Mentor"
                     ? player.Status?.EndsWith("Mentor", StringComparison.OrdinalIgnoreCase) == true
@@ -361,7 +362,7 @@ namespace MentorRouletteTracker
             {
                 ("Player seen most often", NamedGroupExt(playersByIdentity,
                     g => g.Count(),
-                    g => $"{g.Key.Name}@{g.Key.World} — {g.Count()} encounters")),
+                    g => $"{DisplayPlayerIdentity(g.Key.Name, g.Key.World)} — {g.Count()} encounters")),
                 ("Most deaths by one player in a duty", PlayerExt(knownDeathEncounters,
                     e => e.Deaths, e => $"{e.Deaths} deaths")),
                 ("Highest deaths per minute by one player", PlayerExt(
@@ -370,16 +371,16 @@ namespace MentorRouletteTracker
                     e => $"{e.Deaths / e.Record.TimeInDuty.TotalMinutes:F2} deaths/min ({e.Deaths} deaths)")),
                 ("Most total deaths by one player", NamedGroupExt(playersWithKnownDeaths,
                     g => g.Sum(e => e.Deaths),
-                    g => $"{g.Key.Name}@{g.Key.World} — {g.Sum(e => e.Deaths)} deaths")),
+                    g => $"{DisplayPlayerIdentity(g.Key.Name, g.Key.World)} — {g.Sum(e => e.Deaths)} deaths")),
                 ("Highest average deaths per player encounter", NamedGroupExt(playersWithKnownDeaths,
                     g => g.Average(e => e.Deaths),
-                    g => $"{g.Key.Name}@{g.Key.World} — {g.Average(e => e.Deaths):F2} deaths/encounter ({g.Count()} known encounters)")),
+                    g => $"{DisplayPlayerIdentity(g.Key.Name, g.Key.World)} — {g.Average(e => e.Deaths):F2} deaths/encounter ({g.Count()} known encounters)")),
                 ("Most different duties with one player", NamedGroupExt(playersByIdentity,
                     g => g.Select(e => e.Record.DutyName).Distinct().Count(),
-                    g => $"{g.Key.Name}@{g.Key.World} — {g.Select(e => e.Record.DutyName).Distinct().Count()} duties")),
+                    g => $"{DisplayPlayerIdentity(g.Key.Name, g.Key.World)} — {g.Select(e => e.Record.DutyName).Distinct().Count()} duties")),
                 ("Most deathless encounters with one player", NamedGroupExt(playersByIdentity.Where(g => g.Any(e => e.IsConfirmedDeathless)),
                     g => g.Count(e => e.IsConfirmedDeathless),
-                    g => $"{g.Key.Name}@{g.Key.World} — {g.Count(e => e.IsConfirmedDeathless)} deathless encounters"))
+                    g => $"{DisplayPlayerIdentity(g.Key.Name, g.Key.World)} — {g.Count(e => e.IsConfirmedDeathless)} deathless encounters"))
             });
 
             string Streak(Func<DutyRecord, bool> qualifies)

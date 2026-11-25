@@ -47,6 +47,16 @@ up the duty timer, and change the theme or colors.
 The introduction appears once. Read it again under **Settings → Help**, where
 you'll also find the repository and issue-report links.
 
+## Anonymous mode
+
+Use **Settings → Privacy** to replace character names with Player 1/Player 2 or
+job labels such as WHM 1. Labels stay consistent across views, and you can hide
+home worlds beside players too. Group statistics still use the original records.
+
+Notes and record editing are hidden while Anonymous mode is on. Your local history
+and backups keep the real names. New CSV exports are anonymized automatically in
+this mode; **Anonymize CSV exports** under History & exports also works on its own.
+
 ## PvP
 
 Install and enable [PvP Tracker](https://github.com/wrath16/PvpStats) for PvP

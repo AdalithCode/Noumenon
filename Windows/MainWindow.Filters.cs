@@ -136,6 +136,10 @@ namespace MentorRouletteTracker
         {
             var search = globalPlayerSearchText.Trim();
 
+            if (config.AnonymousMode)
+                return string.IsNullOrEmpty(search) || DisplayPlayerIdentity(player.Name, player.World, player.Job)
+                    .Contains(search, StringComparison.OrdinalIgnoreCase);
+
             return string.IsNullOrEmpty(search) ||
                 player.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
                 player.World.Contains(search, StringComparison.OrdinalIgnoreCase) ||

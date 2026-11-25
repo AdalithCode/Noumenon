@@ -13,6 +13,7 @@ public partial class MainWindow
 
     private void StartRecordRepair(DutyRecord record)
     {
+        if (config.AnonymousMode) return;
         StartEditingRecord(record);
         editRepairMode = true;
         repairRosterComplete = record.PvPRosterComplete == true;
@@ -32,6 +33,7 @@ public partial class MainWindow
 
     private void DrawRecordRepairFields(DutyRecord draft)
     {
+        if (config.AnonymousMode) return;
         ImGui.TextWrapped("Fill in what you know. Anything still missing stays unknown. Changes apply when you save.");
         var recorder = string.IsNullOrWhiteSpace(draft.RecorderName) ? "Choose your character" : $"{draft.RecorderName}@{draft.RecorderWorld}";
         if (ImGui.BeginCombo("Recording character", recorder))

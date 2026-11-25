@@ -62,6 +62,9 @@ namespace MentorRouletteTracker
                 minimumEncounters,
                 config.IncludeSelfInStatistics,
                 config.UseMostRecentPlayerRace,
+                config.AnonymousMode,
+                config.AnonymousUseJobs,
+                config.AnonymousHideWorlds,
                 EncounterTargetRace,
                 EncounterTargetGender,
                 LocalPlayer = objectTable.LocalPlayer?.Name.TextValue

@@ -17,6 +17,10 @@ namespace MentorRouletteTracker
         public List<uint> TimerVisibleContentTypeIds { get; set; } = [2, 3, 4, 5, 6];
         public bool TrackAllianceMembers { get; set; } = true;
         public bool TrackPvpEnemies { get; set; } = true;
+        public bool AnonymousMode { get; set; }
+        public bool AnonymousUseJobs { get; set; }
+        public bool AnonymousHideWorlds { get; set; } = true;
+        public bool AnonymizeCsvExports { get; set; }
         public bool UseMostRecentPlayerRace { get; set; }
         public int RecentPerformanceRuns { get; set; } = 10;
         public bool IncludeSelfInStatistics { get; set; }
