@@ -329,6 +329,17 @@ namespace MentorRouletteTracker.PvP
                 return false;
             }
             var changed = ApplyScoreboardJobs(record, result);
+            if (result.HasFinalRoster && result.RecorderName == record.RecorderName &&
+                result.RecorderWorld == record.RecorderWorld && result.Players.ContainsKey(recorderKey))
+            {
+                if (record.Party.RemoveAll(player =>
+                    !result.Players.ContainsKey($"{player.Name}@{player.World}")) > 0)
+                {
+                    record.LalafellCount = record.Party.Count(player => player.Race == "Lalafell" &&
+                        (player.Name != record.RecorderName || player.World != record.RecorderWorld));
+                    changed = true;
+                }
+            }
             if (record.Completed && record.PvPRosterComplete == true && record.PvPCombatStatsComplete &&
                 record.PvPResultsComplete && record.PvPExtendedStatsComplete)
             {

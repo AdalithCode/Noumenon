@@ -41,6 +41,7 @@ public class PvpMatchResult
     public string RecorderWorld { get; set; } = string.Empty;
     public int ExpectedPlayerCount { get; set; }
     public int? Placement { get; set; }
-    public bool RosterComplete => ExpectedPlayerCount > 0 && Players.Count >= ExpectedPlayerCount;
+    public bool HasFinalRoster { get; set; }
+    public bool RosterComplete => HasFinalRoster || ExpectedPlayerCount > 0 && Players.Count >= ExpectedPlayerCount;
     public Dictionary<string, PvpPlayerResult> Players { get; set; } = new(StringComparer.Ordinal);
 }

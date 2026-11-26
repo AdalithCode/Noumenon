@@ -110,18 +110,28 @@ public static class PvpTrackerDatabase
                     result.RecorderName = recorder;
                     result.RecorderWorld = recorderWorld;
                 }
+                var scoreboardKeys = new HashSet<string>(StringComparer.Ordinal);
+                var validRoster = true;
                 if (mode == PvpMode.CrystallineConflict)
                 {
                     if (!match["PostMatch"].IsDocument || !match["PostMatch"]["Teams"].IsDocument)
                         return null;
+                    validRoster = match["PostMatch"]["Teams"].AsDocument.Count == 2;
                     foreach (var team in match["PostMatch"]["Teams"].AsDocument)
                     {
                         if (!team.Value.IsDocument || !team.Value["PlayerStats"].IsArray)
+                        {
+                            validRoster = false;
                             continue;
+                        }
                         foreach (var value in team.Value["PlayerStats"].AsArray)
                         {
                             if (!value.IsDocument || !TryAlias(value["Player"], out var name, out var world))
+                            {
+                                validRoster = false;
                                 continue;
+                            }
+                            validRoster &= scoreboardKeys.Add($"{name}@{world}");
                             AddPlayer(result, name, world, ReadJob(value.AsDocument), ReadCount(value["Deaths"]),
                                 ReadTeam(new BsonValue(team.Key), mode), value.AsDocument);
                         }
@@ -143,7 +153,11 @@ public static class PvpTrackerDatabase
                     {
                         var separator = entry.Key.LastIndexOf(' ');
                         if (!entry.Value.IsDocument || separator <= 0 || separator == entry.Key.Length - 1)
+                        {
+                            validRoster = false;
                             continue;
+                        }
+                        validRoster &= scoreboardKeys.Add($"{entry.Key[..separator].Trim()}@{entry.Key[(separator + 1)..].Trim()}");
                         AddPlayer(result, entry.Key[..separator], entry.Key[(separator + 1)..], "Unknown",
                             ReadCount(entry.Value["Deaths"]), scoreboard: entry.Value.AsDocument);
                     }
@@ -169,6 +183,21 @@ public static class PvpTrackerDatabase
                         ? placements.TryGetValue(player.Team, out var place) ? place : null
                         : winner.Length > 0 && player.Team.Length > 0 ? player.Team == winner ? 1 : 2 : null;
                 result.Placement = result.Players.GetValueOrDefault($"{result.RecorderName}@{result.RecorderWorld}")?.Placement;
+                // CC's final teams can have fewer than ten players after someone leaves.
+                // Frontline and Rival Wings provide the final player count in the results packet.
+                result.HasFinalRoster = validRoster && scoreboardKeys.Count > 0 &&
+                    (mode == PvpMode.CrystallineConflict ? scoreboardKeys.Count <= 10 :
+                        PositiveCount(match["PlayerCount"]) == scoreboardKeys.Count) &&
+                    scoreboardKeys.Contains($"{result.RecorderName}@{result.RecorderWorld}") &&
+                    scoreboardKeys.All(key => result.Players.TryGetValue(key, out var player) &&
+                        player.Deaths.HasValue && player.Kills.HasValue && player.Assists.HasValue &&
+                        player.DamageDealt.HasValue && player.DamageTaken.HasValue && player.HealingDone.HasValue &&
+                        player.Team.Length > 0 && PvpMatchResult.IsValidPlacement(result.Mode, player.Placement));
+                if (result.HasFinalRoster)
+                {
+                    foreach (var key in result.Players.Keys.Where(key => !scoreboardKeys.Contains(key)).ToArray())
+                        result.Players.Remove(key);
+                }
                 log.Information($"{collection} scoreboard loaded: {result.Players.Count} players.");
                 return result;
             }
