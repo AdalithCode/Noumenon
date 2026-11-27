@@ -81,6 +81,8 @@ namespace MentorRouletteTracker
                 ImGui.CalcTextSize("Average clear time:").X));
             headerWidth = Math.Max(headerWidth,
                 ImGui.CalcTextSize(duty.DutyName).X + ImGui.GetStyle().ItemSpacing.X + closeWidth);
+            headerWidth = Math.Max(headerWidth,
+                ImGui.CalcTextSize(averageText).X + ImGui.GetStyle().FramePadding.X * 2);
             var headerStart = ImGui.GetCursorPosX();
             ImGui.TextUnformatted(duty.DutyName);
             ImGui.SameLine(headerStart + headerWidth - closeWidth);
@@ -101,7 +103,7 @@ namespace MentorRouletteTracker
 
             ImGui.TextUnformatted("Average clear time:");
 
-            if (ImGui.Button(averageText + "###AverageClearTime", new Vector2(180, 0)))
+            if (ImGui.Button(averageText + "###AverageClearTime", new Vector2(headerWidth, 0)))
             {
                 mainWindow.OpenDutyHistory(duty.DutyName, fullRunsOnly: true);
             }
