@@ -96,7 +96,7 @@ namespace MentorRouletteTracker
                     ImGui.Spacing();
                     ImGui.TextDisabled("Choose which duties to record.");
                     ImGui.Spacing();
-                    foreach (var contentType in contentTypes)
+                    foreach (var contentType in contentTypes.OrderBy(type => Array.IndexOf(OrderedDutyTypes, type.Name)))
                     {
                         var pvpDisabled = BeginPvpControl(contentType.Id == 6);
                         try
@@ -208,7 +208,7 @@ namespace MentorRouletteTracker
                 {
                     ImGui.TextDisabled("Choose which duties show the timer.");
                     ImGui.Spacing();
-                    foreach (var contentType in contentTypes)
+                    foreach (var contentType in contentTypes.OrderBy(type => Array.IndexOf(OrderedDutyTypes, type.Name)))
                     {
                         var pvpDisabled = BeginPvpControl(contentType.Id == 6);
                         try

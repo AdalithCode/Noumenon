@@ -41,7 +41,8 @@ namespace MentorRouletteTracker
             var fullRuns = records.Where(record => !record.JoinedInProgress).ToList();
             var typeCounts = records.GroupBy(DutyClassification.DisplayType)
                 .Select(group => new DutyCount(group.Key, group.Count()))
-                .OrderByDescending(group => group.Count).ThenBy(group => group.Key).ToList();
+                .OrderBy(group => Array.IndexOf(OrderedDutyTypes, group.Key) is var index && index >= 0 ? index : int.MaxValue)
+                .ThenBy(group => group.Key, StringComparer.OrdinalIgnoreCase).ToList();
             var mostCommon = records.GroupBy(record => record.DutyName)
                 .Select(group => new DutyCount(group.Key, group.Count()))
                 .OrderByDescending(group => group.Count).ThenBy(group => group.Key).FirstOrDefault();

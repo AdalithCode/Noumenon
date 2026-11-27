@@ -35,11 +35,11 @@ public partial class MainWindow
             ImGui.Spacing();
             ImGui.TextWrapped("Records: Open a saved duty to see its players, deaths, wipes, and any notes you've added. Right-click a duty to edit it, fix missing data, or delete it.");
             ImGui.Spacing();
-            ImGui.TextWrapped("People: See the players in your recorded history, how often you've met them, and which duties you ran together.");
-            ImGui.Spacing();
             ImGui.TextWrapped("Statistics: See how your recorded encounters break down by race, gender, job, status, home world, and datacenter.");
             ImGui.Spacing();
             ImGui.TextWrapped("Duty Analysis: Look at your run times and wipes for each duty, plus a heatmap of when you've run duties.");
+            ImGui.Spacing();
+            ImGui.TextWrapped("People: See the players in your recorded history, how often you've met them, and which duties you ran together.");
             ImGui.Spacing();
             ImGui.TextWrapped("Summary: Look through your milestones and streaks, along with your personal PvP totals and best matches.");
             ImGui.Spacing();

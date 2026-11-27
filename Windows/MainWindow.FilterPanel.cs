@@ -185,7 +185,7 @@ namespace MentorRouletteTracker
         private static readonly string[] OrderedDutyTypes =
         [
             "Dungeons", "Trials", "Extreme Trials", "Raids", "Savage Raids", "Ultimate Raids",
-            "Alliance Raids", "PvP", "Guildhests"
+            "Alliance Raids", "PvP", "Guildhests", "Deep Dungeons", "V&C Dungeon", "Chaotic Alliance Raid"
         ];
 
         private void TogglePvpMode(PvpMode mode)
@@ -286,13 +286,7 @@ namespace MentorRouletteTracker
             ImGui.InputTextWithHint("##GlobalPlayerSearch", "Search players...", ref globalPlayerSearchText, 100);
             ImGui.Spacing();
 
-            DrawJobAndWorldFilters();
-            ImGui.Spacing();
-            DrawSimpleFilter("Race", "All races",
-                new[] { "Hyur", "Elezen", "Lalafell", "Miqo'te", "Roegadyn", "Au Ra", "Hrothgar", "Viera" },
-                selectedPlayerRaces);
-            DrawSimpleFilter("Gender", "All genders", new[] { "Male", "Female" }, selectedPlayerGenders);
-            DrawSimpleFilter("Status", "All statuses", GetStatusFilterOptions(), selectedPlayerStatuses);
+            DrawPlayerAttributeFilters();
 
             if (encounterFilter)
             {
@@ -332,7 +326,7 @@ namespace MentorRouletteTracker
                         if (ImGui.Selectable(allLabel, selected.Count == 0, ImGuiSelectableFlags.DontClosePopups))
                             selected.Clear();
                         ImGui.Separator();
-                        foreach (var option in options.Concat(selected).Distinct(StringComparer.Ordinal).Order(StringComparer.OrdinalIgnoreCase).ToList())
+                        foreach (var option in options.Concat(selected.Order(StringComparer.OrdinalIgnoreCase)).Distinct(StringComparer.Ordinal).ToList())
                             DrawFilterOption(option, selected);
                     }
                     finally

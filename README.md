@@ -27,12 +27,12 @@ and `/nom arm`.
 
 - **Records:** past runs, players, deaths, wipes, notes, and PvE death timestamps
   grouped by pull. Click a duty for details; right-click to edit or delete it.
-- **People:** players you've met, how often you've met them, and your shared duty
-  history. Choose their most observed or most recently seen race in Settings.
 - **Statistics:** your recorded encounters grouped by race, gender, job, status,
   home world, and datacenter.
 - **Duty Analysis:** run times, wipes, a day/time heatmap, and recent versus overall
   performance. Type a recent-run count, use -/+, or pick 5, 10, 25, or 50.
+- **People:** players you've met, how often you've met them, and your shared duty
+  history. Choose their most observed or most recently seen race in Settings.
 - **Summary:** milestones, streaks, and your lifetime PvP totals and personal bests.
 
 Use the filters to narrow what's shown. Recent performance compares completed

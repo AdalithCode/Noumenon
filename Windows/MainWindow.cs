@@ -273,12 +273,12 @@ namespace MentorRouletteTracker
                         }
                     }
 
-                    if (ImGui.BeginTabItem("Summary"))
+                    if (ImGui.BeginTabItem("People"))
                     {
                         try
                         {
-                            DrawFilterPanel("Summary", playerFilters: false);
-                            DrawSummaryTab();
+                            DrawFilterPanel("People", encounterFilter: true);
+                            DrawPeopleTab();
                         }
                         finally
                         {
@@ -286,12 +286,12 @@ namespace MentorRouletteTracker
                         }
                     }
 
-                    if (ImGui.BeginTabItem("People"))
+                    if (ImGui.BeginTabItem("Summary"))
                     {
                         try
                         {
-                            DrawFilterPanel("People", encounterFilter: true);
-                            DrawPeopleTab();
+                            DrawFilterPanel("Summary", playerFilters: false);
+                            DrawSummaryTab();
                         }
                         finally
                         {

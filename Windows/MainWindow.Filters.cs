@@ -5,6 +5,8 @@ namespace MentorRouletteTracker
 {
     public partial class MainWindow
     {
+        private static readonly string[] PlayerStatusOrder =
+            ["Mentor", "Party Member", "Returner", "Sprout", "Trade Mentor"];
         private string[] statusFilterOptions = Array.Empty<string>();
         private long statusFilterHistoryVersion = -1;
         private int statusFilterRecordCount = -1;
@@ -14,8 +16,7 @@ namespace MentorRouletteTracker
             if (statusFilterHistoryVersion != config.History.ChangeVersion ||
                 statusFilterRecordCount != config.History.Records.Count)
             {
-                statusFilterOptions = new[]
-                    { "Mentor", "Trade Mentor", "Sprout", "Party Member", "Returner" }
+                statusFilterOptions = PlayerStatusOrder
                     .Concat(config.History.Records.SelectMany(record => record.Party)
                         .Select(GetPlayerStatus))
                     .Distinct(StringComparer.Ordinal)
@@ -25,9 +26,10 @@ namespace MentorRouletteTracker
                 statusFilterRecordCount = config.History.Records.Count;
             }
 
-            return statusFilterOptions.Concat(selectedPlayerStatuses)
+            return PlayerStatusOrder.Concat(statusFilterOptions.Concat(selectedPlayerStatuses)
                 .Where(status => status != "Unknown")
-                .Distinct(StringComparer.Ordinal).Order(StringComparer.OrdinalIgnoreCase);
+                .Except(PlayerStatusOrder, StringComparer.Ordinal).Order(StringComparer.OrdinalIgnoreCase))
+                .Distinct(StringComparer.Ordinal);
         }
 
         private static string GetPlayerStatus(PartyMemberSnapshot player) => player.Status switch

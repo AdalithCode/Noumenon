@@ -79,28 +79,32 @@ public partial class MainWindow
                         draft.RecorderWorld = player.World;
                     }
                     EditText("Job", player.Job, value => player.Job = value, 16);
-                    EditChoice("Race", player.Race, EncounterRaces.Skip(1).Append("Unknown"), value => player.Race = value);
-                    EditChoice("Gender", player.Gender, ["Unknown", "Male", "Female"], value => player.Gender = value);
-                    EditChoice("Status", player.Status, ["Unknown", "Party Member", "Sprout", "Mentor", "Trade Mentor", "Returner"], value => player.Status = value);
-                    var deaths = editDeathTexts.GetValueOrDefault(player, pvp ? string.Empty : "0");
-                    if (ImGui.InputText("Deaths", ref deaths, 32)) editDeathTexts[player] = deaths;
+                    void CharacterDetails()
+                    {
+                        EditChoice("Race", player.Race, EncounterRaces.Skip(1).Append("Unknown"), value => player.Race = value);
+                        EditChoice("Gender", player.Gender, EncounterGenders.Skip(1).Append("Unknown"), value => player.Gender = value);
+                        EditChoice("Status", player.Status, PlayerStatusOrder.Append("Unknown"), value => player.Status = value);
+                    }
+                    if (!pvp)
+                    {
+                        CharacterDetails();
+                        var deaths = editDeathTexts.GetValueOrDefault(player, "0");
+                        if (ImGui.InputText("Deaths", ref deaths, 32)) editDeathTexts[player] = deaths;
+                    }
                     if (pvp)
                     {
                         var side = player.PvPIsEnemy.HasValue ? player.PvPIsEnemy.Value ? 2 : 1 : 0;
                         if (ImGui.Combo("Side", ref side, ["Unknown", "Teammate", "Enemy"], 3))
                             player.PvPIsEnemy = side == 0 ? null : side == 2;
+                        var scores = RepairScores(player);
+                        foreach (var score in EditablePvpScores)
+                            DrawPvpScoreInput(score, player, scores, personal: false);
                         var placement = player.PvPPlacement ?? 0;
                         string[] results = DutyClassification.Mode(draft) == PvpMode.Frontline
                             ? ["Unknown", "1st", "2nd", "3rd"] : ["Unknown", "Win", "Loss"];
                         if (ImGui.Combo("Result", ref placement, results, results.Length))
                             player.PvPPlacement = placement == 0 ? null : placement;
-                        var scores = RepairScores(player);
-                        foreach (var score in EditablePvpScores)
-                        {
-                            var value = scores[score.Column];
-                            if (ImGui.InputText(score.Label.Replace("Your PvP ", "", StringComparison.Ordinal), ref value, 32))
-                                scores[score.Column] = value;
-                        }
+                        CharacterDetails();
                     }
                     if (ImGui.SmallButton("Remove player"))
                     {
@@ -143,7 +147,7 @@ public partial class MainWindow
                 var scores = RepairScores(player);
                 foreach (var score in EditablePvpScores)
                 {
-                    if (!ReadEditedScore(scores[score.Column], score.Maximum, out var value))
+                    if (!ReadEditedScore(EditedPvpScoreText(score, player, scores), score.Maximum, out var value))
                         return Error($"The {score.Label.Replace("Your PvP ", "", StringComparison.Ordinal)} score for {player.Name} must be blank or a whole number from 0 to {score.Maximum:N0}.");
                     score.Write(player, value);
                 }

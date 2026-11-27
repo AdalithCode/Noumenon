@@ -13,7 +13,7 @@ public partial class MainWindow
         ("Caster", ["BLM", "SMN", "RDM", "PCT", "BLU", "THM", "ACN"])
     ];
 
-    private void DrawJobAndWorldFilters()
+    private void DrawPlayerAttributeFilters()
     {
         var worlds = new[] { "Aether", "Primal", "Dynamis", "Crystal" }
             .Select(datacenter => (Name: datacenter, Options: worldDatacenters
@@ -21,15 +21,21 @@ public partial class MainWindow
             .ToArray();
         var players = config.History.Records.SelectMany(record => record.Party);
         var columns = ImGui.GetContentRegionAvail().X >= ImGui.GetFontSize() * 19f ? 2 : 1;
-        if (ImGui.BeginTable("JobAndWorldFilters", columns, ImGuiTableFlags.SizingStretchSame))
+        if (ImGui.BeginTable("PlayerAttributeFilters", columns, ImGuiTableFlags.SizingStretchSame))
         {
             try
             {
+                ImGui.TableNextColumn();
+                DrawSimpleFilter("Race", "All races", EncounterRaces.Skip(1), selectedPlayerRaces);
+                ImGui.TableNextColumn();
+                DrawSimpleFilter("Gender", "All genders", EncounterGenders.Skip(1), selectedPlayerGenders);
                 ImGui.TableNextColumn();
                 ImGui.TextUnformatted("Job");
                 ImGui.SetNextItemWidth(-1);
                 DrawGroupedFilter("Jobs", "All Jobs", "Roles", selectedPlayerJobs, JobFilterGroups,
                     players.Select(player => player.Job));
+                ImGui.TableNextColumn();
+                DrawSimpleFilter("Status", "All statuses", GetStatusFilterOptions(), selectedPlayerStatuses);
                 ImGui.TableNextColumn();
                 ImGui.TextUnformatted("Home world");
                 ImGui.SetNextItemWidth(-1);

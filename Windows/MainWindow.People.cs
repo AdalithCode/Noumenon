@@ -278,8 +278,8 @@ namespace MentorRouletteTracker
                             {
                                 ImGui.TableSetupColumn("Duty");
                                 ImGui.TableSetupColumn("Type");
-                                ImGui.TableSetupColumn("Started");
                                 ImGui.TableSetupColumn("Job");
+                                ImGui.TableSetupColumn("Started");
                                 ImGui.TableSetupColumn("Deaths");
                                 ImGui.TableHeadersRow();
 
@@ -298,9 +298,9 @@ namespace MentorRouletteTracker
                                     ImGui.TableSetColumnIndex(1);
                                     ImGui.TextUnformatted(DutyClassification.DisplayType(entry.Record));
                                     ImGui.TableSetColumnIndex(2);
-                                    ImGui.TextUnformatted(entry.Record.Timestamp.ToString("yyyy-MM-dd HH:mm"));
-                                    ImGui.TableSetColumnIndex(3);
                                     ImGui.TextUnformatted(entry.Player.Job);
+                                    ImGui.TableSetColumnIndex(3);
+                                    ImGui.TextUnformatted(entry.Record.Timestamp.ToString("yyyy-MM-dd HH:mm"));
                                     ImGui.TableSetColumnIndex(4);
                                     ImGui.TextUnformatted(EffectiveDeaths(entry.Record, entry.Player)?.ToString() ?? "-");
                                 }

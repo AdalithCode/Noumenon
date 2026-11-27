@@ -176,10 +176,10 @@ namespace MentorRouletteTracker
             var lifetimePvpRows = new List<(string Label, MilestoneResult Value)>
             {
                 ("Kills (PvP)", PvpStatisticText(lifetimePvpTotals, 1)),
+                ("Deaths (PvP)", lifetimePvpTotals.Deaths?.ToString("N0") ?? "-"),
                 ("Assists (PvP)", PvpStatisticText(lifetimePvpTotals, 2)),
                 ("Damage dealt (PvP)", PvpStatisticText(lifetimePvpTotals, 0)),
                 ("Damage / min (PvP)", PvpStatisticText(lifetimePvpTotals, 14)),
-                ("Deaths (PvP)", lifetimePvpTotals.Deaths?.ToString("N0") ?? "-"),
                 ("Damage taken (PvP)", PvpStatisticText(lifetimePvpTotals, 12)),
                 ("Damage taken / min (PvP)", PvpStatisticText(lifetimePvpTotals, 15)),
                 ("Healing done (PvP)", PvpStatisticText(lifetimePvpTotals, 13)),

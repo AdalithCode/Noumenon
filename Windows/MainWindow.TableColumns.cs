@@ -390,6 +390,8 @@ namespace MentorRouletteTracker
             player.Status?.EndsWith("Mentor", StringComparison.OrdinalIgnoreCase) == true;
 
         private bool? tableColumnsExpansion;
+        private static readonly string[] TableSettingsOrder =
+            ["PvP records", "Records", "Statistics", "Duty Analysis", "People"];
 
         private void DrawTableColumnSettings()
         {
@@ -403,11 +405,11 @@ namespace MentorRouletteTracker
             {
                 ImGui.PopTextWrapPos();
             }
-            foreach (var (table, columns) in TableColumnOptions)
+            foreach (var section in TableSettingsOrder)
             {
-                var statistics = table.StartsWith("Statistics: ", StringComparison.Ordinal);
-                if (statistics && table != "Statistics: Race")
-                    continue;
+                var statistics = section == "Statistics";
+                var table = statistics ? "Statistics: Race" : section;
+                var columns = TableColumnOptions[table];
                 var tables = statistics
                     ? TableColumnOptions.Keys.Where(key => key.StartsWith("Statistics: ", StringComparison.Ordinal)).ToArray()
                     : new[] { table };
@@ -416,7 +418,7 @@ namespace MentorRouletteTracker
                 {
                     if (tableColumnsExpansion.HasValue)
                         ImGui.SetNextItemOpen(tableColumnsExpansion.Value, ImGuiCond.Always);
-                    if (ImGui.TreeNodeEx(statistics ? "Statistics" : table, ImGuiTreeNodeFlags.SpanAvailWidth))
+                    if (ImGui.TreeNodeEx(section, ImGuiTreeNodeFlags.SpanAvailWidth))
                     {
                         try
                         {

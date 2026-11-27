@@ -35,6 +35,20 @@ public partial class MainWindow
     private bool EditShowsDuration => EditShows("time") ||
         (recordToEdit?.DutyType == "PvP" && EditablePvpScores.Any(EditShowsScore));
 
+    private string EditedPvpScoreText(EditablePvpScore score, PartyMemberSnapshot player, Dictionary<string, string> scores) =>
+        score.Column == "pvpDeathsPerMinute" ? editDeathTexts.GetValueOrDefault(player, string.Empty) :
+            scores.GetValueOrDefault(score.Column, string.Empty);
+
+    private void DrawPvpScoreInput(EditablePvpScore score, PartyMemberSnapshot player,
+        Dictionary<string, string> scores, bool personal)
+    {
+        var value = EditedPvpScoreText(score, player, scores);
+        var label = personal ? score.Label : score.Label.Replace("Your PvP ", "", StringComparison.Ordinal);
+        if (!ImGui.InputText(label, ref value, 32)) return;
+        if (score.Column == "pvpDeathsPerMinute") editDeathTexts[player] = value;
+        else scores[score.Column] = value;
+    }
+
     private void PrepareRecordEdit(DutyRecord record)
     {
         editRepairMode = false;
@@ -70,7 +84,7 @@ public partial class MainWindow
             return;
         try
         {
-            foreach (var choice in choices.Prepend(value).Distinct(StringComparer.Ordinal))
+            foreach (var choice in choices.Append(value).Distinct(StringComparer.Ordinal))
                 if (ImGui.Selectable(choice, value == choice))
                     update(choice);
         }
@@ -94,8 +108,7 @@ public partial class MainWindow
         }
         if (EditShows("duty")) EditText("Duty", draft.DutyName, value => draft.DutyName = value);
         if (EditShows("type")) EditChoice("Type", DutyClassification.NormalizeType(draft.DutyType),
-            ["Dungeons", "Guildhests", "Trials", "Extreme Trials", "Raids", "Savage Raids", "Ultimate Raids",
-                "Alliance Raids", "PvP", "Deep Dungeons", "V&C Dungeon", "Chaotic Alliance Raid"], value => draft.DutyType = value);
+            OrderedDutyTypes, value => draft.DutyType = value);
         if (EditShows("job")) EditText("Your job", draft.PlayerJob, value => draft.PlayerJob = value, 16);
         if (EditShows("started")) ImGui.InputText("Started (yyyy-MM-dd HH:mm:ss)", ref editStarted, 32);
         if (EditShowsDuration) ImGui.InputText("Time in duty (hh:mm:ss)", ref editDuration, 32);
@@ -121,6 +134,17 @@ public partial class MainWindow
 
     private void DrawPvpRecordEditFields(DutyRecord draft)
     {
+        var recorder = RecorderPvpPlayer(draft);
+        foreach (var score in EditablePvpScores.Where(EditShowsScore))
+        {
+            if (recorder == null)
+            {
+                ImGui.TextWrapped("Your recording player isn't in this duty's player list, so personal PvP scores can't be edited yet.");
+                break;
+            }
+            DrawPvpScoreInput(score, recorder, editScoreTexts, personal: true);
+            ImGui.TextDisabled("Enter the match total. The per-minute value uses the time in duty.");
+        }
         if (EditShows("pvpPlacement"))
         {
             var placement = draft.PvPPlacement ?? 0;
@@ -128,16 +152,6 @@ public partial class MainWindow
                 ? ["Unknown", "Win", "Loss"] : ["Unknown", "1st", "2nd", "3rd"];
             if (ImGui.Combo("Your team's placement", ref placement, options, options.Length))
                 draft.PvPPlacement = placement == 0 ? null : placement;
-        }
-        foreach (var score in EditablePvpScores.Where(EditShowsScore))
-        {
-            if (!editScoreTexts.TryGetValue(score.Column, out var value))
-            {
-                ImGui.TextWrapped("Your recording player isn't in this duty's player list, so personal PvP scores can't be edited yet.");
-                break;
-            }
-            if (ImGui.InputText(score.Label, ref value, 32)) editScoreTexts[score.Column] = value;
-            ImGui.TextDisabled("Enter the match total. The per-minute value uses the time in duty.");
         }
         if (EditShows("pvpPlacement") || EditablePvpScores.Any(EditShowsScore) || EditShows("deaths") || EditShows("completed"))
             ImGui.TextWrapped("Leave an unknown score blank. PvP Tracker may update these values if more results arrive.");
@@ -173,10 +187,10 @@ public partial class MainWindow
                     if (EditShows("lalafell"))
                     {
                         EditChoice("Race", player.Race, EncounterRaces.Skip(1).Append("Unknown"), value => player.Race = value);
-                        EditChoice("Gender", player.Gender, ["Male", "Female", "Unknown"], value => player.Gender = value);
+                        EditChoice("Gender", player.Gender, EncounterGenders.Skip(1).Append("Unknown"), value => player.Gender = value);
                     }
                     if (EditShows("sprouts") || EditShows("mentors"))
-                        EditChoice("Status", player.Status, ["Sprout", "Mentor", "Trade Mentor", "Returner", "Party Member", "Unknown"], value => player.Status = value);
+                        EditChoice("Status", player.Status, PlayerStatusOrder.Append("Unknown"), value => player.Status = value);
                     if (EditShows("deaths"))
                     {
                         var value = editDeathTexts.GetValueOrDefault(player, string.Empty);
@@ -260,7 +274,7 @@ public partial class MainWindow
         {
             foreach (var score in EditablePvpScores.Where(EditShowsScore))
             {
-                if (!ReadEditedScore(editScoreTexts.GetValueOrDefault(score.Column, string.Empty), score.Maximum, out var value))
+                if (!ReadEditedScore(EditedPvpScoreText(score, recorder, editScoreTexts), score.Maximum, out var value))
                     return Error($"{score.Label} must be blank or a whole number from 0 to {score.Maximum:N0}.");
                 score.Write(recorder, value);
             }

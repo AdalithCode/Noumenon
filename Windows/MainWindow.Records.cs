@@ -533,8 +533,6 @@ namespace MentorRouletteTracker
 
                     ImGui.Text($"Type: {DutyClassification.DisplayType(r)}");
                     ImGui.Text($"Your job: {r.PlayerJob}");
-                    if (r.DutyType == "PvP")
-                        ImGui.Text($"Your team's placement: {PvpPlacementLabel(r.PvPPlacement)}");
 
                     ImGui.Text(
                         $"Started: {r.Timestamp:yyyy-MM-dd HH:mm:ss}");
@@ -550,6 +548,8 @@ namespace MentorRouletteTracker
 
                     ImGui.Text(
                         $"Completed: {(r.Completed ? "Yes" : "No")}");
+                    if (r.DutyType == "PvP")
+                        ImGui.Text($"Your team's placement: {PvpPlacementLabel(r.PvPPlacement)}");
 
                     ImGui.Spacing();
                     ImGui.Separator();
