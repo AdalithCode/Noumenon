@@ -21,9 +21,10 @@ public partial class MainWindow
 
     private static readonly EditablePvpScore[] EditablePvpScores =
     [
-        new("pvpDamage", "pvpDamagePerMinute", "Your PvP damage", long.MaxValue, p => p.PvPDamageDealt, (p, v) => p.PvPDamageDealt = v),
         new("pvpKills", null, "Your PvP kills", int.MaxValue, p => p.PvPKills, (p, v) => p.PvPKills = (int?)v),
+        new("pvpDeathsPerMinute", null, "Your PvP deaths", int.MaxValue, p => p.PvPScoreboardDeaths, (p, v) => p.PvPScoreboardDeaths = (int?)v),
         new("pvpAssists", null, "Your PvP assists", int.MaxValue, p => p.PvPAssists, (p, v) => p.PvPAssists = (int?)v),
+        new("pvpDamage", "pvpDamagePerMinute", "Your PvP damage", long.MaxValue, p => p.PvPDamageDealt, (p, v) => p.PvPDamageDealt = v),
         new("pvpDamageTaken", "pvpDamageTakenPerMinute", "Your PvP damage taken", long.MaxValue, p => p.PvPDamageTaken, (p, v) => p.PvPDamageTaken = v),
         new("pvpHealingDone", "pvpHealingPerMinute", "Your PvP healing", long.MaxValue, p => p.PvPHealingDone, (p, v) => p.PvPHealingDone = v)
     ];
@@ -32,7 +33,7 @@ public partial class MainWindow
     private bool EditShowsScore(EditablePvpScore score) => EditShows(score.Column) ||
         (score.RateColumn != null && EditShows(score.RateColumn));
     private bool EditShowsDuration => EditShows("time") ||
-        (recordToEdit?.DutyType == "PvP" && editColumns.Any(id => id.EndsWith("PerMinute", StringComparison.Ordinal)));
+        (recordToEdit?.DutyType == "PvP" && EditablePvpScores.Any(EditShowsScore));
 
     private void PrepareRecordEdit(DutyRecord record)
     {
@@ -136,8 +137,7 @@ public partial class MainWindow
                 break;
             }
             if (ImGui.InputText(score.Label, ref value, 32)) editScoreTexts[score.Column] = value;
-            if (score.RateColumn != null && EditShows(score.RateColumn))
-                ImGui.TextDisabled("Per-minute values recalculate from the score and time in duty.");
+            ImGui.TextDisabled("Enter the match total. The per-minute value uses the time in duty.");
         }
         if (EditShows("pvpPlacement") || EditablePvpScores.Any(EditShowsScore) || EditShows("deaths") || EditShows("completed"))
             ImGui.TextWrapped("Leave an unknown score blank. PvP Tracker may update these values if more results arrive.");

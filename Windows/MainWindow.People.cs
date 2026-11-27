@@ -177,12 +177,12 @@ namespace MentorRouletteTracker
                             11 => player.DeathlessEncounters,
                             12 => player.SproutEncounters,
                             13 => player.MentorEncounters,
-                            14 => player.PvpDamage,
-                            15 => player.PvpKills,
-                            16 => player.PvpAssists,
+                            14 => PvpTableStatisticValue(player.Pvp, 0),
+                            15 => PvpTableStatisticValue(player.Pvp, 1),
+                            16 => PvpTableStatisticValue(player.Pvp, 2),
                             17 => player.TeammateEncounters,
                             18 => player.EnemyEncounters,
-                            >= 19 and <= 32 => PvpStatisticValue(player.Pvp, sortColumn - 16),
+                            >= 19 and <= 33 => PvpTableStatisticValue(player.Pvp, sortColumn - 16),
                             _ => DisplayPlayerName(player.Name, player.World)
                         }, direction == ImGuiSortDirection.Ascending, player => DisplayPlayerName(player.Name, player.World));
                         data.People = people;
@@ -220,9 +220,9 @@ namespace MentorRouletteTracker
                                 DrawTableCell(11, player.DeathlessEncounters.ToString());
                                 DrawTableCell(12, player.SproutEncounters.ToString());
                                 DrawTableCell(13, player.MentorEncounters.ToString());
-                                DrawTableCell(14, player.PvpDamage?.ToString("N0") ?? "-");
-                                DrawTableCell(15, player.PvpKills?.ToString("N0") ?? "-");
-                                DrawTableCell(16, player.PvpAssists?.ToString("N0") ?? "-");
+                                DrawTableCell(14, PvpTableStatisticText(player.Pvp, 0));
+                                DrawTableCell(15, PvpTableStatisticText(player.Pvp, 1));
+                                DrawTableCell(16, PvpTableStatisticText(player.Pvp, 2));
                                 DrawTableCell(17, player.TeammateEncounters.ToString());
                                 DrawTableCell(18, player.EnemyEncounters.ToString());
                                 DrawPvpStatisticCells(19, player.Pvp, includeScores: false);

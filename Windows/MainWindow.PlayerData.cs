@@ -126,7 +126,7 @@ namespace MentorRouletteTracker
                 2 or 5 => row.Seen,
                 3 => row.Deaths,
                 4 => row.AverageDeaths,
-                >= 6 and <= 22 => PvpStatisticValue(row.Pvp, column - 6, averages: true),
+                >= 6 and <= 23 => PvpTableStatisticValue(row.Pvp, column - 6),
                 _ => row.Name
             }, ascending, row => row.Name + " " + row.Detail);
             data.StatisticsSort[statistic] = (column, ascending, rows);

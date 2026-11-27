@@ -11,6 +11,9 @@ public partial class MainWindow
         public double? DamagePerMinute { get; init; }
         public double? DamageTakenPerMinute { get; init; }
         public double? HealingPerMinute { get; init; }
+        public double? KillsPerMinute { get; init; }
+        public double? AssistsPerMinute { get; init; }
+        public double? DeathsPerMinute { get; init; }
         public long? DamageTaken { get; init; }
         public long? HealingDone { get; init; }
         public long? Deaths { get; init; }
@@ -49,6 +52,9 @@ public partial class MainWindow
             DamagePerMinute = CombinedPvpRatePerMinute(pvp, player => player.PvPDamageDealt),
             DamageTakenPerMinute = CombinedPvpRatePerMinute(pvp, player => player.PvPDamageTaken),
             HealingPerMinute = CombinedPvpRatePerMinute(pvp, player => player.PvPHealingDone),
+            KillsPerMinute = CombinedPvpRatePerMinute(pvp, player => player.PvPKills),
+            AssistsPerMinute = CombinedPvpRatePerMinute(pvp, player => player.PvPAssists),
+            DeathsPerMinute = CombinedPvpRatePerMinute(pvp, player => player.PvPScoreboardDeaths),
             DamageTaken = SumPvpScores(pvp.Select(encounter => encounter.Player.PvPDamageTaken)),
             HealingDone = SumPvpScores(pvp.Select(encounter => encounter.Player.PvPHealingDone)),
             Deaths = SumPvpScores(pvp.Select(encounter => (long?)encounter.Player.PvPScoreboardDeaths)),
@@ -98,8 +104,11 @@ public partial class MainWindow
         new("pvpDamage", averages ? "Average damage (PvP)" : "Damage dealt (PvP)", false),
         new("pvpKills", averages ? "Average kills (PvP)" : "Kills (PvP)", false),
         new("pvpAssists", averages ? "Average assists (PvP)" : "Assists (PvP)", false), ..PvpResultColumns(), ..PvpSupportColumns(averages),
-        PvpDamagePerMinuteColumn(), ..PvpSupportRateColumns()
+        PvpDamagePerMinuteColumn(), ..PvpSupportRateColumns(), PvpDeathsPerMinuteColumn()
     ];
+
+    private static TableColumnOption PvpDeathsPerMinuteColumn() =>
+        new("pvpDeathsPerMinute", "Deaths / min (PvP)", false);
 
     private static TableColumnOption PvpDamagePerMinuteColumn(string label = "Damage / min (PvP)") =>
         new("pvpDamagePerMinute", label, false);
@@ -153,11 +162,29 @@ public partial class MainWindow
         _ => "-"
     };
 
+    private static IComparable? PvpTableStatisticValue(PvpStatistics stats, int column) => column switch
+    {
+        0 => stats.DamagePerMinute,
+        1 => stats.KillsPerMinute,
+        2 => stats.AssistsPerMinute,
+        12 => stats.DamageTakenPerMinute,
+        13 => stats.HealingPerMinute,
+        17 => stats.DeathsPerMinute,
+        _ => PvpStatisticValue(stats, column)
+    };
+
+    private static string PvpTableStatisticText(PvpStatistics stats, int column) => PvpTableStatisticValue(stats, column) switch
+    {
+        double rate when column == 5 => $"{rate:F1}%",
+        double rate => rate.ToString(column is 1 or 2 or 17 ? "N2" : "N0"),
+        _ => "-"
+    };
+
     private void DrawPvpStatisticCells(int start, PvpStatistics stats, bool includeScores = true, bool averages = false)
     {
         var first = includeScores ? 0 : 3;
-        for (var index = first; index < 17; index++)
-            DrawTableCell(start + index - first, PvpStatisticText(stats, index, averages));
+        for (var index = first; index < 18; index++)
+            DrawTableCell(start + index - first, PvpTableStatisticText(stats, index));
     }
 
     private static string PvpPlayerResultLabel(DutyRecord record, PartyMemberSnapshot player) =>

@@ -160,14 +160,15 @@ namespace MentorRouletteTracker
                     11 => Counts(record).Players,
                     12 => Counts(record).Deaths,
                     13 => record.PvPPlacement,
-                    14 => RecorderPvpPlayer(record)?.PvPDamageDealt,
-                    15 => RecorderPvpPlayer(record)?.PvPKills,
-                    16 => RecorderPvpPlayer(record)?.PvPAssists,
-                    17 => RecorderPvpPlayer(record)?.PvPDamageTaken,
-                    18 => RecorderPvpPlayer(record)?.PvPHealingDone,
+                    14 => PvpRatePerMinute(record, RecorderPvpPlayer(record)?.PvPDamageDealt),
+                    15 => PvpRatePerMinute(record, RecorderPvpPlayer(record)?.PvPKills),
+                    16 => PvpRatePerMinute(record, RecorderPvpPlayer(record)?.PvPAssists),
+                    17 => PvpRatePerMinute(record, RecorderPvpPlayer(record)?.PvPDamageTaken),
+                    18 => PvpRatePerMinute(record, RecorderPvpPlayer(record)?.PvPHealingDone),
                     19 => PvpDamagePerMinute(record, RecorderPvpPlayer(record)),
                     20 => PvpRatePerMinute(record, RecorderPvpPlayer(record)?.PvPDamageTaken),
                     21 => PvpRatePerMinute(record, RecorderPvpPlayer(record)?.PvPHealingDone),
+                    22 => PvpRatePerMinute(record, RecorderPvpPlayer(record)?.PvPScoreboardDeaths),
                     _ => record.DutyName
                 }, ascending, record => record.DutyName);
             data.Sort = (column, ascending);
@@ -303,14 +304,15 @@ namespace MentorRouletteTracker
                                 if (SetConfiguredColumnIndex(12))
                                     ImGui.TextUnformatted(Counts(r).Deaths?.ToString() ?? "-");
                                 DrawTableCell(13, r.DutyType == "PvP" ? PvpPlacementLabel(r.PvPPlacement) : "-");
-                                DrawTableCell(14, RecorderPvpPlayer(r)?.PvPDamageDealt?.ToString("N0") ?? "-");
-                                DrawTableCell(15, RecorderPvpPlayer(r)?.PvPKills?.ToString() ?? "-");
-                                DrawTableCell(16, RecorderPvpPlayer(r)?.PvPAssists?.ToString() ?? "-");
-                                DrawTableCell(17, RecorderPvpPlayer(r)?.PvPDamageTaken?.ToString("N0") ?? "-");
-                                DrawTableCell(18, RecorderPvpPlayer(r)?.PvPHealingDone?.ToString("N0") ?? "-");
+                                DrawTableCell(14, PvpRatePerMinute(r, RecorderPvpPlayer(r)?.PvPDamageDealt)?.ToString("N0") ?? "-");
+                                DrawTableCell(15, PvpRatePerMinute(r, RecorderPvpPlayer(r)?.PvPKills)?.ToString("N2") ?? "-");
+                                DrawTableCell(16, PvpRatePerMinute(r, RecorderPvpPlayer(r)?.PvPAssists)?.ToString("N2") ?? "-");
+                                DrawTableCell(17, PvpRatePerMinute(r, RecorderPvpPlayer(r)?.PvPDamageTaken)?.ToString("N0") ?? "-");
+                                DrawTableCell(18, PvpRatePerMinute(r, RecorderPvpPlayer(r)?.PvPHealingDone)?.ToString("N0") ?? "-");
                                 DrawTableCell(19, PvpDamagePerMinute(r, RecorderPvpPlayer(r))?.ToString("N0") ?? "-");
                                 DrawTableCell(20, PvpRatePerMinute(r, RecorderPvpPlayer(r)?.PvPDamageTaken)?.ToString("N0") ?? "-");
                                 DrawTableCell(21, PvpRatePerMinute(r, RecorderPvpPlayer(r)?.PvPHealingDone)?.ToString("N0") ?? "-");
+                                DrawTableCell(22, PvpRatePerMinute(r, RecorderPvpPlayer(r)?.PvPScoreboardDeaths)?.ToString("N2") ?? "-");
                             }
                         }
                     }

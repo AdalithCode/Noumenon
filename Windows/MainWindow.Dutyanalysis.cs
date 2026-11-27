@@ -440,7 +440,7 @@ namespace MentorRouletteTracker
                 9 => row.Mentors,
                 10 => row.Players,
                 11 => row.TargetPlayers,
-                >= 12 and <= 28 => PvpStatisticValue(row.Pvp, column - 12),
+                >= 12 and <= 29 => PvpTableStatisticValue(row.Pvp, column - 12),
                 _ => row.Duty
             }, ascending, row => row.Duty);
             data.Sort = (column, ascending);

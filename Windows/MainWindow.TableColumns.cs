@@ -35,7 +35,8 @@ namespace MentorRouletteTracker
                 new("players", "Players seen", false), new("deaths", "Known deaths", false),
                 new("pvpPlacement", "PvP placement", false), new("pvpDamage", "Your PvP damage", false),
                 new("pvpKills", "Your PvP kills", false), new("pvpAssists", "Your PvP assists", false), ..PvpSupportColumns(),
-                PvpDamagePerMinuteColumn("Your PvP damage / min"), ..PvpSupportRateColumns("Your PvP damage taken / min", "Your PvP healing / min")
+                PvpDamagePerMinuteColumn("Your PvP damage / min"), ..PvpSupportRateColumns("Your PvP damage taken / min", "Your PvP healing / min"),
+                PvpDeathsPerMinuteColumn()
             ],
             ["People"] =
             [
@@ -48,7 +49,7 @@ namespace MentorRouletteTracker
                 new("pvpDamage", "Damage dealt (PvP)", false), new("pvpKills", "Kills (PvP)", false),
                 new("pvpAssists", "Assists (PvP)", false), new("teammates", "Teammate encounters", false),
                 new("enemies", "Enemy encounters", false), ..PvpResultColumns(), ..PvpSupportColumns(),
-                PvpDamagePerMinuteColumn(), ..PvpSupportRateColumns()
+                PvpDamagePerMinuteColumn(), ..PvpSupportRateColumns(), PvpDeathsPerMinuteColumn()
             ],
             ["Duty Analysis"] =
             [
@@ -76,6 +77,50 @@ namespace MentorRouletteTracker
 
         private static string StatisticTableKey(PlayerStatistic statistic) =>
             "Statistics: " + (statistic == PlayerStatistic.RaceAndGender ? "Race and gender" : statistic.ToString());
+
+        // Keep saved column IDs valid while the picker offers one version of each stat.
+        private static string PvpRateAlias(string table, string id) => id switch
+        {
+            "pvpDamage" => "pvpDamagePerMinute",
+            "pvpDamageTaken" => "pvpDamageTakenPerMinute",
+            "pvpHealingDone" => "pvpHealingPerMinute",
+            _ => id
+        };
+
+        private static bool IsRetiredPvpColumn(string id) => id is
+            "pvpWins" or "pvpLosses" or "pvpFirst" or "pvpFirstRate" or
+            "pvpSecond" or "pvpSecondRate" or "pvpThird" or "pvpThirdRate" or
+            "pvpDamagePerMinute" or "pvpDamageTakenPerMinute" or "pvpHealingPerMinute";
+
+        private string TableColumnLabel(string table, TableColumnOption column)
+        {
+            if (table == "PvP records")
+                return ColumnLabel(column);
+            var metric = column.Id switch
+            {
+                "pvpKills" => "Kills / min",
+                "pvpAssists" => "Assists / min",
+                "pvpDamage" => "Damage dealt / min",
+                "pvpDamageTaken" => "Damage taken / min",
+                "pvpHealingDone" => "Healing / min",
+                "pvpWinRate" => "Winrate",
+                _ => null
+            };
+            return metric == null ? ColumnLabel(column) : metric + " (PvP)";
+        }
+
+        private static int PvpColumnRank(string table, string id) => (table == "PvP records" ? id : id.Replace("pvp", "", StringComparison.Ordinal)) switch
+        {
+            "kills" or "Kills" => 0,
+            "deaths" when table == "PvP records" => 1,
+            "DeathsPerMinute" => 1,
+            "assists" or "Assists" => 2,
+            "damage" or "Damage" => 3,
+            "taken" or "DamageTaken" => 4,
+            "healing" or "HealingDone" => 5,
+            "WinRate" => 6,
+            _ => -1
+        };
 
         private float FittedTableHeight(string id, int rows, bool horizontalScroll = false, float maxHeight = 0)
         {
@@ -129,17 +174,32 @@ namespace MentorRouletteTracker
                 .ToDictionary(entry => entry.Id, entry => entry.index, StringComparer.Ordinal);
             var saved = config.TableColumnOrder != null && config.TableColumnOrder.TryGetValue(table, out var order)
                 ? order : null;
-            return (saved ?? Enumerable.Empty<string>()).Where(id => id != null && byId.ContainsKey(id))
-                .Select(id => byId[id]).Concat(GetDefaultColumnOrder(table)).Distinct().ToArray();
+            return OrderPvpCombatColumns(table, (saved ?? Enumerable.Empty<string>())
+                .Where(id => id != null && byId.ContainsKey(id))
+                .Select(id => byId[id]).Concat(GetDefaultColumnOrder(table)).Distinct());
+        }
+
+        private static int[] OrderPvpCombatColumns(string table, IEnumerable<int> indices)
+        {
+            var columns = TableColumnOptions[table];
+            var order = indices.ToList();
+            var combat = order.Where(index => PvpColumnRank(table, columns[index].Id) is >= 0 and <= 5)
+                .OrderBy(index => PvpColumnRank(table, columns[index].Id)).ToArray();
+            if (combat.Length == 0)
+                return order.ToArray();
+            var first = order.FindIndex(index => combat.Contains(index));
+            order.RemoveAll(index => combat.Contains(index));
+            order.InsertRange(first, combat);
+            return order.ToArray();
         }
 
         private static int[] GetDefaultColumnOrder(string table)
         {
             var columns = TableColumnOptions[table];
             if (table == "PvP records")
-                return new[] { "name", "world", "job", "side", "damage", "pvpDamagePerMinute", "kills", "deaths", "assists",
+                return OrderPvpCombatColumns(table, new[] { "name", "world", "job", "side", "damage", "pvpDamagePerMinute", "kills", "deaths", "assists",
                     "taken", "pvpDamageTakenPerMinute", "healing", "pvpHealingPerMinute", "result", "race", "gender", "status" }
-                    .Select(id => Array.FindIndex(columns, column => column.Id == id)).ToArray();
+                    .Select(id => Array.FindIndex(columns, column => column.Id == id)));
             var order = Enumerable.Range(0, columns.Length).ToList();
             var assists = Array.FindIndex(columns, column => column.Id == "pvpAssists");
             if (assists >= 0)
@@ -158,7 +218,7 @@ namespace MentorRouletteTracker
                 order.Remove(rate);
                 order.Insert(order.IndexOf(score) + 1, rate);
             }
-            return order.ToArray();
+            return OrderPvpCombatColumns(table, order);
         }
 
         private void MoveConfiguredColumn(string table, string sourceId, string targetId)
@@ -241,10 +301,12 @@ namespace MentorRouletteTracker
         private bool IsTableColumnVisible(string table, int index)
         {
             var column = TableColumnOptions[table][index];
+            if (IsRetiredPvpColumn(column.Id))
+                return false;
             if (column.Required)
                 return true;
             return config.TableColumns != null && config.TableColumns.TryGetValue(table, out var selected)
-                ? selected != null && selected.Contains(column.Id)
+                ? selected != null && (selected.Contains(column.Id) || selected.Contains(PvpRateAlias(table, column.Id)))
                 : column.DefaultVisible;
         }
 
@@ -264,7 +326,7 @@ namespace MentorRouletteTracker
                     flags |= ImGuiTableColumnFlags.DefaultSort | ImGuiTableColumnFlags.PreferSortDescending;
                 if (table == "People" && columns[i].Id == "seen")
                     flags |= ImGuiTableColumnFlags.PreferSortDescending;
-                var label = i == 0 && groupLabel != null ? groupLabel : ColumnLabel(columns[i]);
+                var label = i == 0 && groupLabel != null ? groupLabel : TableColumnLabel(table, columns[i]);
                 if (table.StartsWith("Statistics: ", StringComparison.Ordinal) && i == 1)
                     label = "Gender";
                 labels[i] = label;
@@ -282,7 +344,7 @@ namespace MentorRouletteTracker
                 headerLines = Math.Max(headerLines, header.Count(character => character == '\n') + 1);
                 ImGui.TableHeader(header);
                 if (ImGui.IsItemHovered())
-                    ImGui.SetTooltip(columns[i].Id.EndsWith("PerMinute", StringComparison.Ordinal)
+                    ImGui.SetTooltip(table != "PvP records" && columns[i].Id is "pvpDamage" or "pvpKills" or "pvpDeathsPerMinute" or "pvpAssists" or "pvpDamageTaken" or "pvpHealingDone"
                         ? "Score divided by recorded duty minutes, including waiting time. Groups combine each player's score and time. Click to sort."
                         : labels[i] + " — click to sort");
             }
@@ -343,30 +405,55 @@ namespace MentorRouletteTracker
             }
             foreach (var (table, columns) in TableColumnOptions)
             {
+                var statistics = table.StartsWith("Statistics: ", StringComparison.Ordinal);
+                if (statistics && table != "Statistics: Race")
+                    continue;
+                var tables = statistics
+                    ? TableColumnOptions.Keys.Where(key => key.StartsWith("Statistics: ", StringComparison.Ordinal)).ToArray()
+                    : new[] { table };
                 ImGui.PushID(table);
                 try
                 {
                     if (tableColumnsExpansion.HasValue)
                         ImGui.SetNextItemOpen(tableColumnsExpansion.Value, ImGuiCond.Always);
-                    if (ImGui.TreeNodeEx(table, ImGuiTreeNodeFlags.SpanAvailWidth))
+                    if (ImGui.TreeNodeEx(statistics ? "Statistics" : table, ImGuiTreeNodeFlags.SpanAvailWidth))
                     {
                         try
                         {
+                            if (statistics)
+                                ImGui.TextWrapped("Applies to all statistics tables.");
                             if (ImGui.Button("Reset columns"))
                             {
-                                config.TableColumns.Remove(table);
-                                config.TableColumnOrder?.Remove(table);
+                                foreach (var target in tables)
+                                {
+                                    config.TableColumns.Remove(target);
+                                    config.TableColumnOrder?.Remove(target);
+                                }
                                 config.Save();
                             }
-                            foreach (var index in GetConfiguredColumnOrder(table))
+                            var order = GetConfiguredColumnOrder(table)
+                                .Where(index => !IsRetiredPvpColumn(columns[index].Id))
+                                .OrderBy(index => PvpColumnRank(table, columns[index].Id) < 0 ? 0 : 1)
+                                .ThenBy(index => PvpColumnRank(table, columns[index].Id)).ToArray();
+                            var pvpHeading = false;
+                            foreach (var index in order)
                             {
                                 var column = columns[index];
                                 if (column.Id == "detail" && table != "Statistics: Race and gender")
                                     continue;
+                                if (!pvpHeading && PvpColumnRank(table, column.Id) >= 0)
+                                {
+                                    ImGui.Spacing();
+                                    ImGui.Separator();
+                                    ImGui.TextUnformatted(table == "PvP records" ? "Combat scores" : "PvP");
+                                    pvpHeading = true;
+                                }
                                 ImGui.PushID(column.Id);
                                 try
                                 {
-                                    var visible = IsTableColumnVisible(table, index);
+                                    var visible = tables.All(target => IsTableColumnVisible(target, index));
+                                    var mixed = !visible && tables.Any(target => IsTableColumnVisible(target, index));
+                                    var label = statistics && column.Id == "group" ? "Category" : TableColumnLabel(table, column);
                                     var pvpDisabled = BeginPvpControl(table == "PvP records" || column.Id.StartsWith("pvp", StringComparison.Ordinal));
                                     try
                                     {
@@ -375,15 +462,20 @@ namespace MentorRouletteTracker
                                         {
                                             if (ImGui.Checkbox("##visible", ref visible))
                                             {
-                                                if (!config.TableColumns.TryGetValue(table, out var selected) || selected == null)
+                                                foreach (var target in tables)
                                                 {
-                                                    selected = columns.Where(option => option.DefaultVisible).Select(option => option.Id).ToHashSet();
-                                                    config.TableColumns[table] = selected;
+                                                    if (!config.TableColumns.TryGetValue(target, out var selected) || selected == null)
+                                                    {
+                                                        selected = TableColumnOptions[target].Where(option => option.DefaultVisible).Select(option => option.Id).ToHashSet();
+                                                        config.TableColumns[target] = selected;
+                                                    }
+                                                    if (visible)
+                                                        selected.Add(column.Id);
+                                                    else
+                                                        selected.Remove(column.Id);
+                                                    if (PvpRateAlias(target, column.Id) != column.Id)
+                                                        selected.Remove(PvpRateAlias(target, column.Id));
                                                 }
-                                                if (visible)
-                                                    selected.Add(column.Id);
-                                                else
-                                                    selected.Remove(column.Id);
                                                 config.Save();
                                             }
                                         }
@@ -397,7 +489,7 @@ namespace MentorRouletteTracker
                                         EndPvpControl(pvpDisabled);
                                     }
                                     ImGui.SameLine();
-                                    ImGui.Selectable($"{ColumnLabel(column)}{(column.Required ? " (always shown)" : "")}###dragColumn");
+                                    ImGui.Selectable($"{label}{(column.Required ? " (always shown)" : mixed ? " (varies)" : "")}###dragColumn");
                                     if (ImGui.BeginDragDropSource())
                                     {
                                         try
@@ -405,7 +497,7 @@ namespace MentorRouletteTracker
                                             draggedColumnTable = table;
                                             draggedColumnId = column.Id;
                                             ImGui.SetDragDropPayload("DUTY_TRACKER_COLUMN", BitConverter.GetBytes(index), ImGuiCond.Once);
-                                            ImGui.TextUnformatted(ColumnLabel(column));
+                                            ImGui.TextUnformatted(label);
                                         }
                                         finally
                                         {
@@ -419,7 +511,8 @@ namespace MentorRouletteTracker
                                             var payload = ImGui.AcceptDragDropPayload("DUTY_TRACKER_COLUMN", ImGuiDragDropFlags.None);
                                             if (!payload.IsNull && payload.IsDelivery() && draggedColumnTable == table && draggedColumnId != null)
                                             {
-                                                MoveConfiguredColumn(table, draggedColumnId, column.Id);
+                                                foreach (var target in tables)
+                                                    MoveConfiguredColumn(target, draggedColumnId, column.Id);
                                                 draggedColumnTable = null;
                                                 draggedColumnId = null;
                                             }
