@@ -38,6 +38,7 @@ namespace MentorRouletteTracker
                 settingsExpansion = false;
                 milestoneExpansion = false;
                 tableColumnsExpansion = false;
+                ImGui.GetStateStorage().SetInt(ImGui.GetID("Custom colors"), 0);
             }
             ImGui.SameLine();
             if (ImGui.Button("Expand all##Settings"))
@@ -46,9 +47,6 @@ namespace MentorRouletteTracker
                 milestoneExpansion = true;
                 tableColumnsExpansion = true;
             }
-            ImGui.SameLine();
-            if (ImGui.Button("Reset all settings"))
-                openResetSettingsConfirmation = true;
             ImGui.Spacing();
 
             var contentTypes = new (uint Id, string Name)[]
@@ -121,6 +119,24 @@ namespace MentorRouletteTracker
                             EndPvpControl(pvpDisabled);
                         }
                     }
+                    ImGui.Spacing();
+                    DrawSectionHeading("PvP");
+                    DrawPvpStatsStatus();
+                    var enemyTrackingDisabled = BeginPvpControl();
+                    try
+                    {
+                        var trackEnemies = config.TrackPvpEnemies;
+                        if (ImGui.Checkbox("Track opposing members in PvP matches", ref trackEnemies))
+                        {
+                            config.TrackPvpEnemies = trackEnemies;
+                            config.Save();
+                        }
+                    }
+                    finally
+                    {
+                        EndPvpControl(enemyTrackingDisabled);
+                    }
+                    ImGui.TextDisabled("New matches only.");
                 }
                 finally
                 {
@@ -166,34 +182,9 @@ namespace MentorRouletteTracker
                     }
                     if (ImGui.IsItemHovered())
                         ImGui.SetTooltip("Uses the encounters matching your filters. Unknown races are skipped. Ties for most observed use the most recent race.");
-                }
-                finally
-                {
-                    EndSettingsSection();
-                }
-            }
-
-            ImGui.Spacing();
-            if (BeginSettingsSection("PvP", defaultOpen: true))
-            {
-                try
-                {
-                    DrawPvpStatsStatus();
-                    var pvpDisabled = BeginPvpControl();
-                    try
-                    {
-                        var trackEnemies = config.TrackPvpEnemies;
-                        if (ImGui.Checkbox("Track opposing members in PvP matches", ref trackEnemies))
-                        {
-                            config.TrackPvpEnemies = trackEnemies;
-                            config.Save();
-                        }
-                    }
-                    finally
-                    {
-                        EndPvpControl(pvpDisabled);
-                    }
-                    ImGui.TextDisabled("New matches only.");
+                    ImGui.Spacing();
+                    DrawSectionHeading("Encounter target");
+                    DrawEncounterTargetSettings();
                 }
                 finally
                 {
@@ -299,13 +290,6 @@ namespace MentorRouletteTracker
             }
 
             ImGui.Spacing();
-            if (BeginSettingsSection("Encounter target"))
-            {
-                try { DrawEncounterTargetSettings(); }
-                finally { EndSettingsSection(); }
-            }
-
-            ImGui.Spacing();
             if (BeginSettingsSection("History & exports"))
             {
                 try
@@ -334,6 +318,9 @@ namespace MentorRouletteTracker
                 finally { EndSettingsSection(); }
             }
 
+            ImGui.Spacing();
+            if (ImGui.Button("Reset all settings"))
+                openResetSettingsConfirmation = true;
             settingsExpansion = null;
         }
 
@@ -598,6 +585,15 @@ namespace MentorRouletteTracker
         private void DrawAppearanceSettings()
         {
             DrawThemeSettings();
+            if (settingsExpansion.HasValue)
+                ImGui.SetNextItemOpen(settingsExpansion.Value, ImGuiCond.Always);
+            if (!ImGui.TreeNodeEx("Custom colors", ImGuiTreeNodeFlags.SpanAvailWidth)) return;
+            try { DrawCustomColorSettings(); }
+            finally { ImGui.TreePop(); }
+        }
+
+        private void DrawCustomColorSettings()
+        {
             ImGui.PushTextWrapPos();
             try
             {
