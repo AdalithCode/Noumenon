@@ -9,6 +9,7 @@ namespace MentorRouletteTracker
         private bool? milestoneExpansion;
         private bool openResetSettingsConfirmation;
         private bool appearanceSettingsDirty;
+        private readonly Stack<Vector4> settingsSectionBounds = new();
 
         private void SaveAppearanceChanges()
         {
@@ -508,27 +509,52 @@ namespace MentorRouletteTracker
             if (settingsExpansion.HasValue)
                 ImGui.SetNextItemOpen(settingsExpansion.Value, ImGuiCond.Always);
             var flags = defaultOpen ? ImGuiTreeNodeFlags.DefaultOpen : ImGuiTreeNodeFlags.None;
-            bool open;
-            ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(8, 3));
-            ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, 4f);
-            try { open = ImGui.CollapsingHeader(title, flags); }
-            finally { ImGui.PopStyleVar(2); }
-            if (!open) return false;
-            ImGui.Indent(12);
-            ImGui.Spacing();
-            ImGui.BeginGroup();
+            if (!DrawDropdownHeader(title, flags)) return false;
+            BeginSettingsOutline(indent: true);
             return true;
         }
 
-        private static void EndSettingsSection()
+        private static bool DrawDropdownHeader(string title, ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags.None)
         {
-            ImGui.EndGroup();
-            var min = ImGui.GetItemRectMin();
-            var max = ImGui.GetItemRectMax();
-            ImGui.GetWindowDrawList().AddLine(new Vector2(min.X - 7, min.Y), new Vector2(min.X - 7, max.Y),
-                ImGui.GetColorU32(ImGuiCol.Separator), 1f);
+            ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(8, 4));
+            ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, 4f);
+            var colors = ImGui.GetStyle().Colors;
+            ImGui.PushStyleColor(ImGuiCol.Header, Vector4.Lerp(colors[(int)ImGuiCol.Header], colors[(int)ImGuiCol.HeaderHovered], 0.5f));
+            try { return ImGui.CollapsingHeader(title, flags); }
+            finally
+            {
+                ImGui.PopStyleColor();
+                ImGui.PopStyleVar(2);
+            }
+        }
+
+        private void EndSettingsSection()
+        {
+            EndSettingsOutline();
             ImGui.Spacing();
             ImGui.Unindent(12);
+        }
+
+        private void BeginSettingsOutline(bool indent = false)
+        {
+            var min = ImGui.GetItemRectMin();
+            var max = ImGui.GetItemRectMax();
+            settingsSectionBounds.Push(new Vector4(min.X, min.Y, max.X, max.Y));
+            if (indent)
+            {
+                ImGui.Indent(12);
+                ImGui.Spacing();
+            }
+            ImGui.BeginGroup();
+        }
+
+        private void EndSettingsOutline()
+        {
+            ImGui.Dummy(new Vector2(0, 4));
+            ImGui.EndGroup();
+            var bounds = settingsSectionBounds.Pop();
+            ImGui.GetWindowDrawList().AddRect(new Vector2(bounds.X, bounds.Y),
+                new Vector2(bounds.Z, ImGui.GetItemRectMax().Y), ImGui.GetColorU32(ImGuiCol.Separator), 4f);
         }
 
         private static void DrawSettingsGroupHeading(string title)
@@ -608,8 +634,14 @@ namespace MentorRouletteTracker
             if (settingsExpansion.HasValue)
                 ImGui.SetNextItemOpen(settingsExpansion.Value, ImGuiCond.Always);
             if (!ImGui.TreeNodeEx("Custom colors", ImGuiTreeNodeFlags.SpanAvailWidth)) return;
+            BeginSettingsOutline();
             try { DrawCustomColorSettings(); }
-            finally { ImGui.TreePop(); }
+            finally
+            {
+                EndSettingsOutline();
+                ImGui.TreePop();
+                ImGui.Spacing();
+            }
         }
 
         private void DrawCustomColorSettings()
@@ -771,6 +803,7 @@ namespace MentorRouletteTracker
                         ImGui.SetNextItemOpen(milestoneExpansion.Value, ImGuiCond.Always);
                     if (ImGui.TreeNodeEx(MilestoneTitle(section.Title), ImGuiTreeNodeFlags.SpanAvailWidth))
                     {
+                        BeginSettingsOutline();
                         try
                         {
                             foreach (var row in section.Rows)
@@ -798,7 +831,9 @@ namespace MentorRouletteTracker
                         }
                         finally
                         {
+                            EndSettingsOutline();
                             ImGui.TreePop();
+                            ImGui.Spacing();
                         }
                     }
                 }
