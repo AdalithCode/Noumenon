@@ -53,93 +53,196 @@ namespace MentorRouletteTracker
             }
         }
 
+        private string? summaryCategory;
+        private sealed record SummaryCategoryView(string Title, List<(string Label, MilestoneResult Value)> Rows);
+        private static readonly (string Label, string Milestone)[] SummaryCardMetrics =
+        [
+            ("Duties completed", "Total completed duties"),
+            ("Time in duties", "Total time spent in duties"),
+            ("Deaths observed", "Total deaths observed"),
+            ("Wipes", "Total wipes")
+        ];
+
         private void DrawSummaryTab()
         {
             config.HiddenMilestones ??= new();
             RefreshMilestonesIfNeeded(objectTable.LocalPlayer?.Name.TextValue);
-
             try
             {
-                if (ImGui.BeginChild("SummaryContent", Vector2.Zero, false,
-                        ImGuiWindowFlags.HorizontalScrollbar))
+                if (!ImGui.BeginChild("SummaryContent", Vector2.Zero, false)) return;
+                var hasCards = DrawSummaryCards();
+                var categories = milestoneSections.Select(section => new SummaryCategoryView(section.Title,
+                    section.Rows.Where(row => !config.HiddenMilestones.Contains(MilestoneKey(section.Title, row.Label)) &&
+                        (section.Title != "Overall stats" || !SummaryCardMetrics.Any(card => card.Milestone == row.Label)))
+                        .ToList())).Where(section => section.Rows.Count > 0).ToList();
+                if (categories.Count == 0)
                 {
-                    DrawSectionHeading("Milestones");
-                    ImGui.TextDisabled("Your PvP stats cover all dates. Duty filters still apply.");
-                    ImGui.Separator();
-
-                    if (milestoneSections.Count == 0)
-                        ImGui.TextDisabled("No completed duties with these filters.");
-                    else
+                    if (!hasCards)
+                        ImGui.TextWrapped(milestoneSections.Count == 0 ? "No completed duties with these filters." :
+                            "No milestones selected. Choose which ones to show in Settings.");
+                    return;
+                }
+                if (!categories.Any(section => section.Title == summaryCategory))
+                    summaryCategory = categories[0].Title;
+                ImGui.Spacing();
+                var wide = ImGui.GetContentRegionAvail().X >= ImGui.GetFontSize() * 45;
+                if (wide)
+                {
+                    try
                     {
-                        var anyVisible = false;
-                        foreach (var section in milestoneSections)
+                        if (ImGui.BeginChild("SummaryCategories", new Vector2(ImGui.GetFontSize() * 13, 0), false))
                         {
-                            var visibleRows = section.Rows.Where(row =>
-                                !config.HiddenMilestones.Contains(MilestoneKey(section.Title, row.Label))).ToList();
-                            if (visibleRows.Count == 0)
-                                continue;
-                            anyVisible = true;
-                            ImGui.Spacing();
-                            if (ImGui.CollapsingHeader($"{MilestoneTitle(section.Title)}##Lifetime{section.Title}",
-                                    ImGuiTreeNodeFlags.DefaultOpen))
-                            {
-                                if (BeginStyledTable($"LifetimeTable##{section.Title}", 2,
-                                    ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg |
-                                    ImGuiTableFlags.SizingStretchProp | ImGuiTableFlags.Resizable))
-                                {
-                                    try
-                                    {
-                                        ImGui.TableSetupColumn("Record");
-                                        ImGui.TableSetupColumn("Result");
-                                        ImGui.TableHeadersRow();
-
-                                        foreach (var row in visibleRows)
-                                        {
-                                            ImGui.TableNextRow();
-                                            ImGui.TableSetColumnIndex(0);
-                                            ImGui.TextUnformatted(EncounterMilestoneLabel(row.Label));
-                                            ImGui.TableSetColumnIndex(1);
-
-                                            if (row.Value.Record is DutyRecord record)
-                                            {
-                                                ImGui.PushID(row.Label);
-                                                try
-                                                {
-                                                    if (ImGui.Selectable(row.Value.Text + "###ViewDuty"))
-                                                    {
-                                                        selectedRecord = record;
-                                                        showDetailWindow = true;
-                                                    }
-                                                    if (ImGui.IsItemHovered())
-                                                        ImGui.SetTooltip("View duty details");
-                                                }
-                                                finally
-                                                {
-                                                    ImGui.PopID();
-                                                }
-                                            }
-                                            else
-                                            {
-                                                ImGui.TextUnformatted(row.Value.Text);
-                                            }
-                                        }
-                                    }
-                                    finally
-                                    {
-                                        EndStyledTable();
-                                    }
-                                }
-                            }
+                            ImGui.TextDisabled("Categories");
+                            ImGui.Separator();
+                            DrawSummaryCategories(categories, compact: false);
                         }
-                        if (!anyVisible)
-                            ImGui.TextDisabled("No milestones selected. Choose which ones to show in Settings.");
                     }
+                    finally { ImGui.EndChild(); }
+                    ImGui.SameLine();
+                    try
+                    {
+                        if (ImGui.BeginChild("SummaryRecords", Vector2.Zero, false))
+                            DrawSummaryCategory(categories.First(section => section.Title == summaryCategory));
+                    }
+                    finally { ImGui.EndChild(); }
+                }
+                else
+                {
+                    DrawSummaryCategories(categories, compact: true);
+                    ImGui.Spacing();
+                    ImGui.Separator();
+                    ImGui.Spacing();
+                    DrawSummaryCategory(categories.First(section => section.Title == summaryCategory));
                 }
             }
-            finally
+            finally { ImGui.EndChild(); }
+        }
+
+        private bool DrawSummaryCards()
+        {
+            var overall = milestoneSections.FirstOrDefault(section => section.Title == "Overall stats").Rows;
+            if (overall == null) return false;
+            var cards = SummaryCardMetrics.Select(card => (card.Label, card.Milestone,
+                Value: overall.FirstOrDefault(row => row.Label == card.Milestone).Value))
+                .Where(card => card.Value != null && !config.HiddenMilestones.Contains(MilestoneKey("Overall stats", card.Milestone)))
+                .ToList();
+            if (cards.Count == 0) return false;
+            var columns = Math.Clamp((int)(ImGui.GetContentRegionAvail().X / (ImGui.GetFontSize() * 12)), 1, cards.Count);
+            var height = ImGui.GetTextLineHeightWithSpacing() * 3.5f + 16;
+            ImGui.PushStyleVar(ImGuiStyleVar.CellPadding, new Vector2(4, 4));
+            ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(10, 8));
+            ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, 4f);
+            try
             {
-                ImGui.EndChild();
+                if (!ImGui.BeginTable("SummaryOverviewCards", columns, ImGuiTableFlags.SizingStretchSame)) return false;
+                try
+                {
+                    foreach (var card in cards)
+                    {
+                        ImGui.TableNextColumn();
+                        try
+                        {
+                            if (ImGui.BeginChild("SummaryCard##" + card.Milestone, new Vector2(0, height), true,
+                                    ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse))
+                            {
+                                ImGui.TextDisabled(card.Label);
+                                ImGui.Spacing();
+                                ImGui.SetWindowFontScale(1.25f);
+                                try { DrawSummaryText(card.Value.Text); }
+                                finally { ImGui.SetWindowFontScale(1f); }
+                            }
+                        }
+                        finally { ImGui.EndChild(); }
+                    }
+                }
+                finally { ImGui.EndTable(); }
             }
+            finally { ImGui.PopStyleVar(3); }
+            return true;
+        }
+
+        private static string SummaryCategoryLabel(string title) => title switch
+        {
+            "Overall stats" => "Overview",
+            "PvP player stats" => "Lifetime PvP",
+            "Your PvP results" => "PvP results",
+            "Duty Records" => "Duty records",
+            "Individual Player Records" => "Player records",
+            "Streaks and Droughts" => "Streaks & droughts",
+            "Activity Records" => "Activity records",
+            _ => title
+        };
+
+        private void DrawSummaryCategories(List<SummaryCategoryView> categories, bool compact)
+        {
+            var columns = Math.Clamp((int)(ImGui.GetContentRegionAvail().X / (ImGui.GetFontSize() * 13)), 1, 3);
+            if (compact && !ImGui.BeginTable("SummaryCategoryButtons", columns, ImGuiTableFlags.SizingStretchSame)) return;
+            try
+            {
+                foreach (var section in categories)
+                {
+                    if (compact) ImGui.TableNextColumn();
+                    if (ImGui.Selectable($"{SummaryCategoryLabel(section.Title)}###Category{section.Title}",
+                            summaryCategory == section.Title, ImGuiSelectableFlags.None, new Vector2(0, ImGui.GetFrameHeight() + 4)))
+                        summaryCategory = section.Title;
+                }
+            }
+            finally { if (compact) ImGui.EndTable(); }
+        }
+
+        private void DrawSummaryCategory(SummaryCategoryView section)
+        {
+            DrawSectionHeading(MilestoneTitle(section.Title));
+            if (section.Title == "PvP player stats")
+                ImGui.TextDisabled("All dates. Duty filters still apply.");
+            ImGui.Spacing();
+            if (!BeginStyledTable("SummaryRecords##" + section.Title, 2,
+                    ImGuiTableFlags.RowBg | ImGuiTableFlags.SizingStretchProp | ImGuiTableFlags.Resizable)) return;
+            try
+            {
+                var recordWidth = section.Title == "Overall stats" ? 0.7f : 0.42f;
+                ImGui.TableSetupColumn("Record", ImGuiTableColumnFlags.WidthStretch, recordWidth);
+                ImGui.TableSetupColumn("Result", ImGuiTableColumnFlags.WidthStretch, 1f - recordWidth);
+                ImGui.TableHeadersRow();
+                foreach (var row in section.Rows)
+                {
+                    ImGui.TableNextRow();
+                    ImGui.TableSetColumnIndex(0);
+                    DrawSummaryText(EncounterMilestoneLabel(row.Label));
+                    ImGui.TableSetColumnIndex(1);
+                    if (row.Value.Record is not DutyRecord record)
+                    {
+                        DrawSummaryText(row.Value.Text);
+                        continue;
+                    }
+                    ImGui.PushID(row.Label);
+                    try
+                    {
+                        var start = ImGui.GetCursorPos();
+                        var height = ImGui.CalcTextSize(row.Value.Text, false, Math.Max(1, ImGui.GetContentRegionAvail().X)).Y;
+                        if (ImGui.Selectable("##ViewDuty", false, ImGuiSelectableFlags.None, new Vector2(0, height)))
+                        {
+                            selectedRecord = record;
+                            showDetailWindow = true;
+                        }
+                        var hovered = ImGui.IsItemHovered();
+                        var end = ImGui.GetCursorPos();
+                        ImGui.SetCursorPos(start);
+                        DrawSummaryText(row.Value.Text);
+                        ImGui.SetCursorPos(end);
+                        if (hovered) ImGui.SetTooltip("View duty details");
+                    }
+                    finally { ImGui.PopID(); }
+                }
+            }
+            finally { EndStyledTable(); }
+        }
+
+        private static void DrawSummaryText(string text)
+        {
+            ImGui.PushTextWrapPos();
+            try { ImGui.TextUnformatted(text); }
+            finally { ImGui.PopTextWrapPos(); }
         }
 
         private static string MilestoneTitle(string title) => title == "PvP player stats" ? "Your lifetime PvP stats" : title;
