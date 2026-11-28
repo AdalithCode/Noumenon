@@ -71,7 +71,7 @@ public partial class MainWindow
         return selected;
     }
 
-    private static bool DrawDashboardCards(string id, IReadOnlyList<DashboardCard> cards)
+    private bool DrawDashboardCards(string id, IReadOnlyList<DashboardCard> cards)
     {
         if (cards.Count == 0) return false;
         var columns = Math.Clamp((int)(ImGui.GetContentRegionAvail().X / (ImGui.GetFontSize() * 12)), 1, cards.Count);
@@ -95,9 +95,8 @@ public partial class MainWindow
                         {
                             ImGui.TextDisabled(card.Label);
                             ImGui.Spacing();
-                            ImGui.SetWindowFontScale(1.25f);
-                            try { DrawDashboardText(card.Value); }
-                            finally { ImGui.SetWindowFontScale(1f); }
+                            using (dashboardFont?.Push())
+                                DrawDashboardText(card.Value);
                         }
                     }
                     finally { ImGui.EndChild(); }

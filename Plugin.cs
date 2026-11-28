@@ -83,7 +83,8 @@ namespace MentorRouletteTracker
                     config,
                     tracker,
                     exportDir,
-                    objectTable);
+                    objectTable,
+                    pluginInterface.UiBuilder.FontAtlas);
                 windowSystem.AddWindow(mainWindow);
                 if (!config.StorageAvailable)
                     mainWindow.IsOpen = true;

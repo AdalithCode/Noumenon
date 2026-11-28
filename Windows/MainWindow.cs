@@ -1,6 +1,7 @@
 
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Windowing;
+using Dalamud.Interface.ManagedFontAtlas;
 using Dalamud.Plugin.Services;
 using MentorRouletteTracker.DutyTracking;
 using System.Numerics;
@@ -13,6 +14,7 @@ namespace MentorRouletteTracker
         private readonly DutyTrackerService tracker;
         private readonly string exportDirectory;
         private readonly IObjectTable objectTable;
+        private readonly IFontHandle? dashboardFont;
         private readonly Dictionary<string, string> worldDatacenters = new(StringComparer.OrdinalIgnoreCase);
 
         private readonly HashSet<string> selectedPlayerRaces = new();
@@ -56,7 +58,8 @@ namespace MentorRouletteTracker
             Configuration config,
             DutyTrackerService tracker,
             string exportDirectory,
-            IObjectTable objectTable)
+            IObjectTable objectTable,
+            IFontAtlas? fontAtlas = null)
             : base("Noumenon###MentorRouletteTrackerMain")
         {
             this.config = config;
@@ -80,6 +83,8 @@ namespace MentorRouletteTracker
 
             Size = new Vector2(800, 520);
             SizeCondition = ImGuiCond.FirstUseEver;
+            dashboardFont = fontAtlas?.NewDelegateFontHandle(e =>
+                e.OnPreBuild(tk => tk.AddDalamudDefaultFont(-1.25f)));
         }
 
         private static void DrawSectionHeading(string title) =>
@@ -99,6 +104,7 @@ namespace MentorRouletteTracker
 
         public void Dispose()
         {
+            dashboardFont?.Dispose();
             showDetailWindow = false;
             showNoteWindow = false;
             showPlayerHistory = false;
