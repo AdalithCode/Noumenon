@@ -66,6 +66,10 @@ namespace MentorRouletteTracker
             this.tracker = tracker;
             this.exportDirectory = exportDirectory;
             this.objectTable = objectTable;
+            summaryCategory = config.DashboardCategories.GetValueOrDefault("Summary");
+            statisticsCategory = config.DashboardCategories.GetValueOrDefault("Statistics");
+            dutyAnalysisCategory = config.DashboardCategories.GetValueOrDefault("DutyAnalysis");
+            settingsCategory = config.DashboardCategories.GetValueOrDefault("Settings");
             showIntroduction = !config.HasSeenIntroduction;
             IsOpen = showIntroduction;
 

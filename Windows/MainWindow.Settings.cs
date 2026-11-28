@@ -292,6 +292,9 @@ namespace MentorRouletteTracker
             ClearFilters();
             filtersExpanded = false;
             selectedHeatmapMetric = 0;
+            summaryCategory = null;
+            statisticsCategory = null;
+            dutyAnalysisCategory = null;
             settingsCategory = null;
             milestoneExpansion = false;
         }

@@ -12,6 +12,7 @@ public partial class MainWindow
     {
         if (categories.Length == 0) return string.Empty;
         if (!categories.Contains(selected)) selected = categories[0];
+        var previous = selected;
         ImGui.PushID(id);
         try
         {
@@ -51,6 +52,11 @@ public partial class MainWindow
             }
         }
         finally { ImGui.PopID(); }
+        if (selected != previous)
+        {
+            config.DashboardCategories[id] = selected!;
+            config.Save();
+        }
         return selected!;
     }
 

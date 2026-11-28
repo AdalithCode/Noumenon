@@ -27,6 +27,7 @@ namespace MentorRouletteTracker
         public string EncounterTargetRace { get; set; } = "Lalafell";
         public string EncounterTargetGender { get; set; } = string.Empty;
         public HashSet<string> HiddenMilestones { get; set; } = new();
+        public Dictionary<string, string> DashboardCategories { get; set; } = new();
         public Dictionary<string, HashSet<string>> TableColumns { get; set; } = new();
         public Dictionary<string, List<string>> TableColumnOrder { get; set; } = new();
         public uint? WindowBackgroundColor { get; set; }
