@@ -39,18 +39,30 @@ public partial class MainWindow
         ImGui.TextWrapped("Choose a race and gender for the count columns, streaks, and droughts. This also changes the count beside Unique players.");
         var raceIndex = Array.IndexOf(EncounterRaces, EncounterTargetRace);
         var genderIndex = Array.IndexOf(EncounterGenders, EncounterTargetGender);
-        ImGui.SetNextItemWidth(ImGui.GetFontSize() * 14);
-        if (ImGui.Combo("Race##EncounterTarget", ref raceIndex,
-                ["All races", ..EncounterRaces.Skip(1)], EncounterRaces.Length))
+        var columns = ImGui.GetContentRegionAvail().X >= ImGui.GetFontSize() * 24 ? 2 : 1;
+        if (ImGui.BeginTable("EncounterTargetChoices", columns, ImGuiTableFlags.SizingStretchSame))
         {
-            config.EncounterTargetRace = EncounterRaces[raceIndex];
-            config.Save();
-        }
-        ImGui.SetNextItemWidth(ImGui.GetFontSize() * 14);
-        if (ImGui.Combo("Gender##EncounterTarget", ref genderIndex, ["Either", "Male", "Female"], EncounterGenders.Length))
-        {
-            config.EncounterTargetGender = EncounterGenders[genderIndex];
-            config.Save();
+            try
+            {
+                ImGui.TableNextColumn();
+                ImGui.TextUnformatted("Race");
+                ImGui.SetNextItemWidth(-1);
+                if (ImGui.Combo("##EncounterTargetRace", ref raceIndex,
+                        ["All races", ..EncounterRaces.Skip(1)], EncounterRaces.Length))
+                {
+                    config.EncounterTargetRace = EncounterRaces[raceIndex];
+                    config.Save();
+                }
+                ImGui.TableNextColumn();
+                ImGui.TextUnformatted("Gender");
+                ImGui.SetNextItemWidth(-1);
+                if (ImGui.Combo("##EncounterTargetGender", ref genderIndex, ["Either", "Male", "Female"], EncounterGenders.Length))
+                {
+                    config.EncounterTargetGender = EncounterGenders[genderIndex];
+                    config.Save();
+                }
+            }
+            finally { ImGui.EndTable(); }
         }
         ImGui.TextWrapped("Player filters and Include yourself in statistics still apply. Unknown race or gender won't match a specific choice.");
     }

@@ -40,10 +40,8 @@ namespace MentorRouletteTracker
                     }
 
                     var anyVisible = false;
-                    void Section(bool visible, Action draw)
+                    void Section(Action draw)
                     {
-                        if (!visible)
-                            return;
                         if (anyVisible)
                         {
                             ImGui.Spacing();
@@ -54,16 +52,14 @@ namespace MentorRouletteTracker
                         anyVisible = true;
                     }
 
-                    Section(config.ShowStatisticsOverview, () => DrawSelectedPlayerStatistics(data));
-                    Section(config.ShowRaceStatistics, () => DrawRaceStatistics(data));
-                    Section(config.ShowGenderStatistics, () => DrawPlayerStatisticTable(data, PlayerStatistic.Gender));
-                    Section(config.ShowJobStatistics, () => DrawPlayerStatisticTable(data, PlayerStatistic.Job));
-                    Section(config.ShowStatusStatistics, () => DrawPlayerStatisticTable(data, PlayerStatistic.Status));
-                    Section(config.ShowWorldStatistics, () => DrawPlayerStatisticTable(data, PlayerStatistic.World));
-                    Section(config.ShowDatacenterStatistics, () => DrawPlayerStatisticTable(data, PlayerStatistic.Datacenter));
+                    Section(() => DrawSelectedPlayerStatistics(data));
+                    Section(() => DrawRaceStatistics(data));
+                    Section(() => DrawPlayerStatisticTable(data, PlayerStatistic.Gender));
+                    Section(() => DrawPlayerStatisticTable(data, PlayerStatistic.Job));
+                    Section(() => DrawPlayerStatisticTable(data, PlayerStatistic.Status));
+                    Section(() => DrawPlayerStatisticTable(data, PlayerStatistic.World));
+                    Section(() => DrawPlayerStatisticTable(data, PlayerStatistic.Datacenter));
 
-                    if (!anyVisible)
-                        ImGui.TextDisabled("No stats selected. Choose which sections to show in Settings.");
                 }
             }
             finally

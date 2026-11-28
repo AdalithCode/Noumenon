@@ -26,13 +26,6 @@ namespace MentorRouletteTracker
         public bool IncludeSelfInStatistics { get; set; }
         public string EncounterTargetRace { get; set; } = "Lalafell";
         public string EncounterTargetGender { get; set; } = string.Empty;
-        public bool ShowStatisticsOverview { get; set; } = true;
-        public bool ShowRaceStatistics { get; set; } = true;
-        public bool ShowGenderStatistics { get; set; } = true;
-        public bool ShowJobStatistics { get; set; } = true;
-        public bool ShowStatusStatistics { get; set; } = true;
-        public bool ShowWorldStatistics { get; set; } = true;
-        public bool ShowDatacenterStatistics { get; set; } = true;
         public HashSet<string> HiddenMilestones { get; set; } = new();
         public Dictionary<string, HashSet<string>> TableColumns { get; set; } = new();
         public Dictionary<string, List<string>> TableColumnOrder { get; set; } = new();

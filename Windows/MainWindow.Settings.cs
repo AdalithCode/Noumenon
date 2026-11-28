@@ -33,19 +33,17 @@ namespace MentorRouletteTracker
 
         private void DrawSettingsContent()
         {
-            if (ImGui.Button("Collapse all##Settings"))
+            if (ImGui.SmallButton("Collapse all##Settings"))
             {
                 settingsExpansion = false;
                 milestoneExpansion = false;
-                tableColumnsExpansion = false;
                 ImGui.GetStateStorage().SetInt(ImGui.GetID("Custom colors"), 0);
             }
             ImGui.SameLine();
-            if (ImGui.Button("Expand all##Settings"))
+            if (ImGui.SmallButton("Expand all##Settings"))
             {
                 settingsExpansion = true;
                 milestoneExpansion = true;
-                tableColumnsExpansion = true;
             }
             ImGui.Spacing();
 
@@ -86,47 +84,23 @@ namespace MentorRouletteTracker
 
                     ImGui.Spacing();
                     var recordNpcDuties = config.RecordNpcDuties;
-                    if (ImGui.Checkbox("Record Trust and Duty Support runs", ref recordNpcDuties))
+                    if (DrawSettingsCheckbox("Record Trust and Duty Support runs", ref recordNpcDuties))
                     {
                         config.RecordNpcDuties = recordNpcDuties;
                         config.Save();
                     }
                     ImGui.Spacing();
-                    ImGui.TextDisabled("Choose which duties to record.");
+                    DrawSettingsGroupHeading("Duty types");
                     ImGui.Spacing();
-                    foreach (var contentType in contentTypes.OrderBy(type => Array.IndexOf(OrderedDutyTypes, type.Name)))
-                    {
-                        var pvpDisabled = BeginPvpControl(contentType.Id == 6);
-                        try
-                        {
-                            var isTracked =
-                                config.TrackedContentTypeIds.Contains(contentType.Id);
-
-                            if (ImGui.Checkbox(
-                                $"{contentType.Name}##DutyTracking",
-                                ref isTracked))
-                            {
-                                if (isTracked)
-                                    config.TrackedContentTypeIds.Add(contentType.Id);
-                                else
-                                    config.TrackedContentTypeIds.Remove(contentType.Id);
-
-                                config.Save();
-                            }
-                        }
-                        finally
-                        {
-                            EndPvpControl(pvpDisabled);
-                        }
-                    }
+                    DrawDutyTypeOptions(contentTypes, timer: false);
                     ImGui.Spacing();
-                    DrawSectionHeading("PvP");
+                    DrawSettingsGroupHeading("PvP");
                     DrawPvpStatsStatus();
                     var enemyTrackingDisabled = BeginPvpControl();
                     try
                     {
                         var trackEnemies = config.TrackPvpEnemies;
-                        if (ImGui.Checkbox("Track opposing members in PvP matches", ref trackEnemies))
+                        if (DrawSettingsCheckbox("Track opposing members in PvP matches", ref trackEnemies))
                         {
                             config.TrackPvpEnemies = trackEnemies;
                             config.Save();
@@ -151,7 +125,7 @@ namespace MentorRouletteTracker
                 {
                     bool includeSelf = config.IncludeSelfInStatistics;
 
-                    if (ImGui.Checkbox(
+                    if (DrawSettingsCheckbox(
                         "Include yourself in statistics",
                         ref includeSelf))
                     {
@@ -173,8 +147,9 @@ namespace MentorRouletteTracker
 
                     ImGui.Spacing();
                     var raceDisplay = config.UseMostRecentPlayerRace ? 1 : 0;
-                    ImGui.SetNextItemWidth(ImGui.GetFontSize() * 14);
-                    if (ImGui.Combo("Race shown in People", ref raceDisplay,
+                    ImGui.TextUnformatted("Race shown in People");
+                    ImGui.SetNextItemWidth(Math.Min(ImGui.GetContentRegionAvail().X, ImGui.GetFontSize() * 18));
+                    if (ImGui.Combo("##PeopleRaceDisplay", ref raceDisplay,
                             ["Most observed", "Most recently seen"], 2))
                     {
                         config.UseMostRecentPlayerRace = raceDisplay == 1;
@@ -183,7 +158,7 @@ namespace MentorRouletteTracker
                     if (ImGui.IsItemHovered())
                         ImGui.SetTooltip("Uses the encounters matching your filters. Unknown races are skipped. Ties for most observed use the most recent race.");
                     ImGui.Spacing();
-                    DrawSectionHeading("Encounter target");
+                    DrawSettingsGroupHeading("Encounter target");
                     DrawEncounterTargetSettings();
                 }
                 finally
@@ -199,31 +174,7 @@ namespace MentorRouletteTracker
                 {
                     ImGui.TextDisabled("Choose which duties show the timer.");
                     ImGui.Spacing();
-                    foreach (var contentType in contentTypes.OrderBy(type => Array.IndexOf(OrderedDutyTypes, type.Name)))
-                    {
-                        var pvpDisabled = BeginPvpControl(contentType.Id == 6);
-                        try
-                        {
-                            var showTimer =
-                                config.TimerVisibleContentTypeIds.Contains(contentType.Id);
-
-                            if (ImGui.Checkbox(
-                                $"{contentType.Name}##TimerVisibility",
-                                ref showTimer))
-                            {
-                                if (showTimer)
-                                    config.TimerVisibleContentTypeIds.Add(contentType.Id);
-                                else
-                                    config.TimerVisibleContentTypeIds.Remove(contentType.Id);
-
-                                config.Save();
-                            }
-                        }
-                        finally
-                        {
-                            EndPvpControl(pvpDisabled);
-                        }
-                    }
+                    DrawDutyTypeOptions(contentTypes, timer: true);
                 }
                 finally
                 {
@@ -243,19 +194,6 @@ namespace MentorRouletteTracker
                 try
                 {
                     DrawAppearanceSettings();
-                }
-                finally
-                {
-                    EndSettingsSection();
-                }
-            }
-
-            ImGui.Spacing();
-            if (BeginSettingsSection("Statistics sections"))
-            {
-                try
-                {
-                    DrawStatisticsCustomization();
                 }
                 finally
                 {
@@ -318,6 +256,8 @@ namespace MentorRouletteTracker
                 finally { EndSettingsSection(); }
             }
 
+            ImGui.Spacing();
+            ImGui.Separator();
             ImGui.Spacing();
             if (ImGui.Button("Reset all settings"))
                 openResetSettingsConfirmation = true;
@@ -427,7 +367,6 @@ namespace MentorRouletteTracker
             selectedHeatmapMetric = 0;
             settingsExpansion = false;
             milestoneExpansion = false;
-            tableColumnsExpansion = false;
         }
 
         private void DrawHistorySettings()
@@ -569,17 +508,98 @@ namespace MentorRouletteTracker
             if (settingsExpansion.HasValue)
                 ImGui.SetNextItemOpen(settingsExpansion.Value, ImGuiCond.Always);
             var flags = defaultOpen ? ImGuiTreeNodeFlags.DefaultOpen : ImGuiTreeNodeFlags.None;
-            if (!ImGui.CollapsingHeader(title, flags))
-                return false;
-            ImGui.Indent();
+            bool open;
+            ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(8, 3));
+            ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, 4f);
+            try { open = ImGui.CollapsingHeader(title, flags); }
+            finally { ImGui.PopStyleVar(2); }
+            if (!open) return false;
+            ImGui.Indent(12);
             ImGui.Spacing();
+            ImGui.BeginGroup();
             return true;
         }
 
         private static void EndSettingsSection()
         {
+            ImGui.EndGroup();
+            var min = ImGui.GetItemRectMin();
+            var max = ImGui.GetItemRectMax();
+            ImGui.GetWindowDrawList().AddLine(new Vector2(min.X - 7, min.Y), new Vector2(min.X - 7, max.Y),
+                ImGui.GetColorU32(ImGuiCol.Separator), 1f);
             ImGui.Spacing();
-            ImGui.Unindent();
+            ImGui.Unindent(12);
+        }
+
+        private static void DrawSettingsGroupHeading(string title)
+        {
+            DrawSectionHeading(title);
+            ImGui.Separator();
+            ImGui.Spacing();
+        }
+
+        private static int SettingsChoiceColumns(IEnumerable<string> labels)
+        {
+            var minimumWidth = labels.Max(label => ImGui.CalcTextSize(label).X) +
+                ImGui.GetFrameHeight() + ImGui.GetStyle().ItemInnerSpacing.X + 16;
+            return Math.Clamp((int)(ImGui.GetContentRegionAvail().X / Math.Max(1, minimumWidth)), 1, 3);
+        }
+
+        private static bool DrawSettingsCheckbox(string label, ref bool value)
+        {
+            var style = ImGui.GetStyle();
+            if (ImGui.CalcTextSize(label).X + ImGui.GetFrameHeight() + style.ItemInnerSpacing.X <= ImGui.GetContentRegionAvail().X)
+                return ImGui.Checkbox(label, ref value);
+            ImGui.BeginGroup();
+            try
+            {
+                var changed = ImGui.Checkbox("##" + label, ref value);
+                ImGui.SameLine(0, style.ItemInnerSpacing.X);
+                ImGui.PushTextWrapPos();
+                try { ImGui.TextUnformatted(label); }
+                finally { ImGui.PopTextWrapPos(); }
+                if (ImGui.IsItemClicked())
+                {
+                    value = !value;
+                    changed = true;
+                }
+                return changed;
+            }
+            finally { ImGui.EndGroup(); }
+        }
+
+        private void DrawDutyTypeOptions((uint Id, string Name)[] contentTypes, bool timer)
+        {
+            var minimumWidth = contentTypes.Max(type => ImGui.CalcTextSize(type.Name).X) +
+                ImGui.GetFrameHeight() + ImGui.GetStyle().ItemInnerSpacing.X + 16;
+            var columns = Math.Clamp((int)(ImGui.GetContentRegionAvail().X / Math.Max(1, minimumWidth)), 1, 3);
+            ImGui.PushStyleVar(ImGuiStyleVar.CellPadding, new Vector2(6, 4));
+            try
+            {
+                if (!ImGui.BeginTable(timer ? "TimerDutyTypes" : "RecordingDutyTypes", columns, ImGuiTableFlags.SizingStretchSame)) return;
+                try
+                {
+                    foreach (var contentType in contentTypes.OrderBy(type => Array.IndexOf(OrderedDutyTypes, type.Name)))
+                    {
+                        ImGui.TableNextColumn();
+                        var disabled = BeginPvpControl(contentType.Id == 6);
+                        try
+                        {
+                            var selected = timer ? config.TimerVisibleContentTypeIds : config.TrackedContentTypeIds;
+                            var enabled = selected.Contains(contentType.Id);
+                            if (ImGui.Checkbox($"{contentType.Name}##{(timer ? "TimerVisibility" : "DutyTracking")}", ref enabled))
+                            {
+                                if (enabled) selected.Add(contentType.Id);
+                                else selected.Remove(contentType.Id);
+                                config.Save();
+                            }
+                        }
+                        finally { EndPvpControl(disabled); }
+                    }
+                }
+                finally { ImGui.EndTable(); }
+            }
+            finally { ImGui.PopStyleVar(); }
         }
 
         private void DrawAppearanceSettings()
@@ -725,30 +745,6 @@ namespace MentorRouletteTracker
                 ImGui.PopID();
             }
             ImGui.Spacing();
-        }
-
-        private void DrawStatisticsCustomization()
-        {
-            var changed = false;
-            void Option(string label, bool visible, Action<bool> update)
-            {
-                if (ImGui.Checkbox(label, ref visible))
-                {
-                    update(visible);
-                    changed = true;
-                }
-            }
-
-            Option("Overview", config.ShowStatisticsOverview, value => config.ShowStatisticsOverview = value);
-            Option("Race", config.ShowRaceStatistics, value => config.ShowRaceStatistics = value);
-            Option("Gender", config.ShowGenderStatistics, value => config.ShowGenderStatistics = value);
-            Option("Job", config.ShowJobStatistics, value => config.ShowJobStatistics = value);
-            Option("Status", config.ShowStatusStatistics, value => config.ShowStatusStatistics = value);
-            Option("Home world", config.ShowWorldStatistics, value => config.ShowWorldStatistics = value);
-            Option("Datacenter", config.ShowDatacenterStatistics, value => config.ShowDatacenterStatistics = value);
-
-            if (changed)
-                config.Save();
         }
 
         private void DrawMilestoneCustomization()

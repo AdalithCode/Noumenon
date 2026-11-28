@@ -45,7 +45,7 @@ public partial class MainWindow
             ImGui.Spacing();
             ImGui.TextWrapped("Use the filters to narrow what's shown in a tab. Your recording choices are set separately in Settings.");
             ImGui.Spacing();
-            ImGui.TextWrapped("Settings also lets you choose the columns, statistics sections, and milestones you see. You can include yourself in player statistics, customize the duty timer and theme, create backups, and export your history to CSV.");
+            ImGui.TextWrapped("Settings also lets you choose the columns and milestones you see. You can include yourself in player statistics, customize the duty timer and theme, create backups, and export your history to CSV.");
             ImGui.Spacing();
             ImGui.Separator();
             DrawSectionHeading("PvP matches");

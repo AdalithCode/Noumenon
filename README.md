@@ -41,7 +41,7 @@ runs too, and unknown death counts are excluded from the death average.
 
 **Settings** is where you choose what gets recorded, including Trust/Duty Support
 runs, alliance members, and PvP opponents. Explorer Mode isn't recorded. You can
-also choose your columns, reorder them, pick your statistics and milestones, set
+also choose your columns, reorder them, pick your milestones, set
 up the duty timer, and change the theme or colors.
 
 The introduction appears once. Read it again under **Settings → Help**, where

@@ -389,160 +389,172 @@ namespace MentorRouletteTracker
         private static bool IsMentor(PartyMemberSnapshot player) =>
             player.Status?.EndsWith("Mentor", StringComparison.OrdinalIgnoreCase) == true;
 
-        private bool? tableColumnsExpansion;
+        private int settingsTableIndex;
         private static readonly string[] TableSettingsOrder =
             ["PvP records", "Records", "Statistics", "Duty Analysis", "People"];
 
-        private void DrawTableColumnSettings()
+        private string ColumnChoiceLabel(string table, TableColumnOption column, bool statistics)
         {
-            config.TableColumns ??= new();
-            ImGui.PushTextWrapPos();
+            var label = statistics && column.Id == "group" ? "Category" : TableColumnLabel(table, column);
+            return PvpColumnRank(table, column.Id) >= 0 ? label.Replace(" (PvP)", "", StringComparison.Ordinal) : label;
+        }
+
+        private void DrawColumnChoice(string table, string[] tables, int index, bool statistics)
+        {
+            var column = TableColumnOptions[table][index];
+            ImGui.PushID(column.Id);
             try
             {
-                ImGui.TextDisabled("Check columns to show them. Drag a name to change its position.");
-            }
-            finally
-            {
-                ImGui.PopTextWrapPos();
-            }
-            foreach (var section in TableSettingsOrder)
-            {
-                var statistics = section == "Statistics";
-                var table = statistics ? "Statistics: Race" : section;
-                var columns = TableColumnOptions[table];
-                var tables = statistics
-                    ? TableColumnOptions.Keys.Where(key => key.StartsWith("Statistics: ", StringComparison.Ordinal)).ToArray()
-                    : new[] { table };
-                ImGui.PushID(table);
+                var visible = tables.All(target => IsTableColumnVisible(target, index));
+                var mixed = !visible && tables.Any(target => IsTableColumnVisible(target, index));
+                var label = ColumnChoiceLabel(table, column, statistics);
+                var pvpDisabled = BeginPvpControl(table == "PvP records" || column.Id.StartsWith("pvp", StringComparison.Ordinal));
                 try
                 {
-                    if (tableColumnsExpansion.HasValue)
-                        ImGui.SetNextItemOpen(tableColumnsExpansion.Value, ImGuiCond.Always);
-                    if (ImGui.TreeNodeEx(section, ImGuiTreeNodeFlags.SpanAvailWidth))
+                    ImGui.BeginDisabled(column.Required);
+                    try
                     {
-                        try
+                        if (ImGui.Checkbox("##visible", ref visible))
                         {
-                            if (statistics)
-                                ImGui.TextWrapped("Applies to all statistics tables.");
-                            if (ImGui.Button("Reset columns"))
+                            foreach (var target in tables)
                             {
-                                foreach (var target in tables)
+                                if (!config.TableColumns.TryGetValue(target, out var selected) || selected == null)
                                 {
-                                    config.TableColumns.Remove(target);
-                                    config.TableColumnOrder?.Remove(target);
+                                    selected = TableColumnOptions[target].Where(option => option.DefaultVisible).Select(option => option.Id).ToHashSet();
+                                    config.TableColumns[target] = selected;
                                 }
-                                config.Save();
+                                if (visible)
+                                    selected.Add(column.Id);
+                                else
+                                    selected.Remove(column.Id);
+                                if (PvpRateAlias(target, column.Id) != column.Id)
+                                    selected.Remove(PvpRateAlias(target, column.Id));
                             }
-                            var order = GetConfiguredColumnOrder(table)
-                                .Where(index => !IsRetiredPvpColumn(columns[index].Id))
-                                .OrderBy(index => PvpColumnRank(table, columns[index].Id) < 0 ? 0 : 1)
-                                .ThenBy(index => PvpColumnRank(table, columns[index].Id)).ToArray();
-                            var pvpHeading = false;
-                            foreach (var index in order)
-                            {
-                                var column = columns[index];
-                                if (column.Id == "detail" && table != "Statistics: Race and gender")
-                                    continue;
-                                if (!pvpHeading && PvpColumnRank(table, column.Id) >= 0)
-                                {
-                                    ImGui.Spacing();
-                                    ImGui.Separator();
-                                    ImGui.TextUnformatted(table == "PvP records" ? "Combat scores" : "PvP");
-                                    pvpHeading = true;
-                                }
-                                ImGui.PushID(column.Id);
-                                try
-                                {
-                                    var visible = tables.All(target => IsTableColumnVisible(target, index));
-                                    var mixed = !visible && tables.Any(target => IsTableColumnVisible(target, index));
-                                    var label = statistics && column.Id == "group" ? "Category" : TableColumnLabel(table, column);
-                                    var pvpDisabled = BeginPvpControl(table == "PvP records" || column.Id.StartsWith("pvp", StringComparison.Ordinal));
-                                    try
-                                    {
-                                        ImGui.BeginDisabled(column.Required);
-                                        try
-                                        {
-                                            if (ImGui.Checkbox("##visible", ref visible))
-                                            {
-                                                foreach (var target in tables)
-                                                {
-                                                    if (!config.TableColumns.TryGetValue(target, out var selected) || selected == null)
-                                                    {
-                                                        selected = TableColumnOptions[target].Where(option => option.DefaultVisible).Select(option => option.Id).ToHashSet();
-                                                        config.TableColumns[target] = selected;
-                                                    }
-                                                    if (visible)
-                                                        selected.Add(column.Id);
-                                                    else
-                                                        selected.Remove(column.Id);
-                                                    if (PvpRateAlias(target, column.Id) != column.Id)
-                                                        selected.Remove(PvpRateAlias(target, column.Id));
-                                                }
-                                                config.Save();
-                                            }
-                                        }
-                                        finally
-                                        {
-                                            ImGui.EndDisabled();
-                                        }
-                                    }
-                                    finally
-                                    {
-                                        EndPvpControl(pvpDisabled);
-                                    }
-                                    ImGui.SameLine();
-                                    ImGui.Selectable($"{label}{(column.Required ? " (always shown)" : mixed ? " (varies)" : "")}###dragColumn");
-                                    if (ImGui.BeginDragDropSource())
-                                    {
-                                        try
-                                        {
-                                            draggedColumnTable = table;
-                                            draggedColumnId = column.Id;
-                                            ImGui.SetDragDropPayload("DUTY_TRACKER_COLUMN", BitConverter.GetBytes(index), ImGuiCond.Once);
-                                            ImGui.TextUnformatted(label);
-                                        }
-                                        finally
-                                        {
-                                            ImGui.EndDragDropSource();
-                                        }
-                                    }
-                                    if (ImGui.BeginDragDropTarget())
-                                    {
-                                        try
-                                        {
-                                            var payload = ImGui.AcceptDragDropPayload("DUTY_TRACKER_COLUMN", ImGuiDragDropFlags.None);
-                                            if (!payload.IsNull && payload.IsDelivery() && draggedColumnTable == table && draggedColumnId != null)
-                                            {
-                                                foreach (var target in tables)
-                                                    MoveConfiguredColumn(target, draggedColumnId, column.Id);
-                                                draggedColumnTable = null;
-                                                draggedColumnId = null;
-                                            }
-                                        }
-                                        finally
-                                        {
-                                            ImGui.EndDragDropTarget();
-                                        }
-                                    }
-                                }
-                                finally
-                                {
-                                    ImGui.PopID();
-                                }
-                            }
+                            config.Save();
                         }
-                        finally
-                        {
-                            ImGui.TreePop();
-                        }
+                    }
+                    finally
+                    {
+                        ImGui.EndDisabled();
                     }
                 }
                 finally
                 {
-                    ImGui.PopID();
+                    EndPvpControl(pvpDisabled);
+                }
+                ImGui.SameLine();
+                ImGui.Selectable($"{label}{(mixed ? " *" : "")}###dragColumn", false, ImGuiSelectableFlags.None,
+                    new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetFrameHeight()));
+                if (ImGui.IsItemHovered() && (column.Required || mixed))
+                    ImGui.SetTooltip(column.Required ? "Always shown. Drag to change its position." :
+                        "Some statistics tables have different choices. Use the checkbox to set them all.");
+                if (ImGui.BeginDragDropSource())
+                {
+                    try
+                    {
+                        draggedColumnTable = table;
+                        draggedColumnId = column.Id;
+                        ImGui.SetDragDropPayload("DUTY_TRACKER_COLUMN", BitConverter.GetBytes(index), ImGuiCond.Once);
+                        ImGui.TextUnformatted(label);
+                    }
+                    finally
+                    {
+                        ImGui.EndDragDropSource();
+                    }
+                }
+                if (ImGui.BeginDragDropTarget())
+                {
+                    try
+                    {
+                        var payload = ImGui.AcceptDragDropPayload("DUTY_TRACKER_COLUMN", ImGuiDragDropFlags.None);
+                        if (!payload.IsNull && payload.IsDelivery() && draggedColumnTable == table && draggedColumnId != null)
+                        {
+                            foreach (var target in tables)
+                                MoveConfiguredColumn(target, draggedColumnId, column.Id);
+                            draggedColumnTable = null;
+                            draggedColumnId = null;
+                        }
+                    }
+                    finally
+                    {
+                        ImGui.EndDragDropTarget();
+                    }
                 }
             }
-            tableColumnsExpansion = null;
+            finally
+            {
+                ImGui.PopID();
+            }
+        }
+
+        private void DrawTableColumnSettings()
+        {
+            config.TableColumns ??= new();
+            var available = ImGui.GetContentRegionAvail().X;
+            var resetWidth = ImGui.CalcTextSize("Reset columns").X + ImGui.GetStyle().FramePadding.X * 2;
+            var inlineReset = available >= resetWidth + ImGui.GetFontSize() * 10;
+            ImGui.SetNextItemWidth(inlineReset ? available - resetWidth - ImGui.GetStyle().ItemSpacing.X : available);
+            if (ImGui.Combo("##ColumnSettingsTable", ref settingsTableIndex, TableSettingsOrder, TableSettingsOrder.Length))
+            {
+                draggedColumnTable = null;
+                draggedColumnId = null;
+            }
+            var section = TableSettingsOrder[settingsTableIndex];
+            var statistics = section == "Statistics";
+            var table = statistics ? "Statistics: Race" : section;
+            var columns = TableColumnOptions[table];
+            var tables = statistics
+                ? TableColumnOptions.Keys.Where(key => key.StartsWith("Statistics: ", StringComparison.Ordinal)).ToArray()
+                : new[] { table };
+            if (inlineReset) ImGui.SameLine();
+            if (ImGui.SmallButton("Reset columns"))
+            {
+                foreach (var target in tables)
+                {
+                    config.TableColumns.Remove(target);
+                    config.TableColumnOrder?.Remove(target);
+                }
+                config.Save();
+            }
+            ImGui.PushTextWrapPos();
+            try
+            {
+                ImGui.TextDisabled(statistics ? "All statistics tables. Check to show; drag to reorder." :
+                    "Check to show. Drag names to reorder.");
+            }
+            finally { ImGui.PopTextWrapPos(); }
+
+            ImGui.PushID(table);
+            try
+            {
+                var order = GetConfiguredColumnOrder(table)
+                    .Where(index => !IsRetiredPvpColumn(columns[index].Id) && columns[index].Id != "detail")
+                    .OrderBy(index => PvpColumnRank(table, columns[index].Id) < 0 ? 0 : 1)
+                    .ThenBy(index => PvpColumnRank(table, columns[index].Id)).ToArray();
+                foreach (var combat in new[] { false, true })
+                {
+                    var choices = order.Where(index => (PvpColumnRank(table, columns[index].Id) >= 0) == combat).ToArray();
+                    if (choices.Length == 0) continue;
+                    if (combat)
+                    {
+                        ImGui.Spacing();
+                        ImGui.Separator();
+                        ImGui.TextUnformatted(table == "PvP records" ? "Combat scores" : "PvP");
+                    }
+                    var count = SettingsChoiceColumns(choices.Select(index => ColumnChoiceLabel(table, columns[index], statistics) + " *"));
+                    if (!ImGui.BeginTable(combat ? "CombatColumnChoices" : "GeneralColumnChoices", count, ImGuiTableFlags.SizingStretchSame)) continue;
+                    try
+                    {
+                        foreach (var index in choices)
+                        {
+                            ImGui.TableNextColumn();
+                            DrawColumnChoice(table, tables, index, statistics);
+                        }
+                    }
+                    finally { ImGui.EndTable(); }
+                }
+            }
+            finally { ImGui.PopID(); }
         }
     }
 }
