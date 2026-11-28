@@ -84,7 +84,13 @@ namespace MentorRouletteTracker
             Size = new Vector2(800, 520);
             SizeCondition = ImGuiCond.FirstUseEver;
             dashboardFont = fontAtlas?.NewDelegateFontHandle(e =>
-                e.OnPreBuild(tk => tk.AddDalamudDefaultFont(-1.25f)));
+                e.OnPreBuild(tk => tk.Font = tk.AddDalamudAssetFont(
+                    Dalamud.DalamudAsset.NotoSansCjkRegular,
+                    new SafeFontConfig
+                    {
+                        SizePx = MathF.Round(Dalamud.Interface.UiBuilder.DefaultFontSizePx * 1.8f),
+                        GlyphRanges = [0x20, 0xFF, 0x2010, 0x2026, 0]
+                    })));
         }
 
         private static void DrawSectionHeading(string title) =>

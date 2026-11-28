@@ -112,11 +112,19 @@ public partial class MainWindow
     {
         if (cards.Count == 0) return false;
         var columns = Math.Clamp((int)(ImGui.GetContentRegionAvail().X / (ImGui.GetFontSize() * 12)), 1, cards.Count);
-        var height = ImGui.GetTextLineHeightWithSpacing() * 3.5f + 16;
+        var innerWidth = Math.Max(1, ImGui.GetContentRegionAvail().X / columns - 30);
+        var labelHeight = cards.Max(card => ImGui.CalcTextSize(card.Label, false, innerWidth).Y);
+        float valueHeight;
+        using (dashboardFont?.Push())
+            valueHeight = cards.Max(card => ImGui.CalcTextSize(card.Value, false, innerWidth).Y);
+        var height = labelHeight + 4 + valueHeight + 20;
         ImGui.PushID(id);
         ImGui.PushStyleVar(ImGuiStyleVar.CellPadding, new Vector2(4, 4));
         ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(10, 8));
         ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, 4f);
+        var border = ImGui.GetStyle().Colors[(int)ImGuiCol.Border];
+        border.W *= 0.55f;
+        ImGui.PushStyleColor(ImGuiCol.Border, border);
         try
         {
             if (!ImGui.BeginTable("OverviewCards", columns, ImGuiTableFlags.SizingStretchSame)) return false;
@@ -130,8 +138,11 @@ public partial class MainWindow
                         if (ImGui.BeginChild("Card##" + card.Label, new Vector2(0, height), true,
                                 ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse))
                         {
-                            ImGui.TextDisabled(card.Label);
-                            ImGui.Spacing();
+                            var labelTop = ImGui.GetCursorPosY();
+                            ImGui.PushTextWrapPos();
+                            try { ImGui.TextDisabled(card.Label); }
+                            finally { ImGui.PopTextWrapPos(); }
+                            ImGui.SetCursorPosY(labelTop + labelHeight + 4);
                             using (dashboardFont?.Push())
                                 DrawDashboardText(card.Value);
                         }
@@ -144,6 +155,7 @@ public partial class MainWindow
         }
         finally
         {
+            ImGui.PopStyleColor();
             ImGui.PopStyleVar(3);
             ImGui.PopID();
         }
