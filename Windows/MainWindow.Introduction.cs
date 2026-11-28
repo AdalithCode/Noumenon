@@ -43,6 +43,8 @@ public partial class MainWindow
             ImGui.Spacing();
             ImGui.TextWrapped("Summary: Look through your milestones and streaks, along with your personal PvP totals and best matches.");
             ImGui.Spacing();
+            ImGui.TextWrapped("Statistics, Duty Analysis, Summary, and Settings use categories. Pick one on the left to switch views. In a smaller window, those buttons move to the top.");
+            ImGui.Spacing();
             ImGui.TextWrapped("Use the filters to narrow what's shown in a tab. Your recording choices are set separately in Settings.");
             ImGui.Spacing();
             ImGui.TextWrapped("Settings also lets you choose the columns and milestones you see. You can include yourself in player statistics, customize the duty timer and theme, create backups, and export your history to CSV.");

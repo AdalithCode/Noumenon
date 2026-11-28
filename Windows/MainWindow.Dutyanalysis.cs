@@ -66,92 +66,46 @@ namespace MentorRouletteTracker
             return dutyAnalysisData;
         }
 
+        private string? dutyAnalysisCategory;
+        private static readonly string[] DutyAnalysisCategories = ["Overview", "Duty types", "Activity", "By duty"];
+
         private void DrawDutyAnalysisTab()
         {
             var data = GetDutyAnalysisData();
-
             try
             {
-                if (ImGui.BeginChild(
-                    "DutyAnalysisContent",
-                    Vector2.Zero,
-                    false,
-                    ImGuiWindowFlags.HorizontalScrollbar))
+                if (!ImGui.BeginChild("DutyAnalysisContent", Vector2.Zero, false)) return;
+                if (data.CompletedDuties == 0)
                 {
-                    ImGui.Text("Duty Analysis");
-                    ImGui.TextDisabled("Completed duties matching the filters above.");
-                    ImGui.Separator();
-                    ImGui.Spacing();
-
-                    if (data.CompletedDuties == 0)
+                    ImGui.TextWrapped("No completed duties with these filters.");
+                    return;
+                }
+                DrawDashboardCards("DutyAnalysis",
+                [
+                    new("Completed duties", data.CompletedDuties.ToString()),
+                    new("Average time", data.AverageFullRunTime.HasValue ? FormatDuration(data.AverageFullRunTime.Value) : "N/A", "Completed runs entered from the start."),
+                    new("Wipes / duty", data.AverageWipes.ToString("F2")),
+                    new("Joined in progress", data.JoinedInProgress.ToString())
+                ]);
+                ImGui.Spacing();
+                dutyAnalysisCategory = DrawCategoryPage("DutyAnalysis", DutyAnalysisCategories, dutyAnalysisCategory, title =>
+                {
+                    switch (title)
                     {
-                        ImGui.TextDisabled("No completed duties with these filters.");
+                        case "Overview": DrawMostCommonDuty(data.MostCommon!); break;
+                        case "Duty types": DrawDutyTypeStatistics(data.TypeCounts); break;
+                        case "Activity":
+                            DrawDutiesHeatmap(data.Heatmap);
+                            ImGui.Spacing();
+                            ImGui.Separator();
+                            ImGui.Spacing();
+                            DrawRecentPerformance(data);
+                            break;
+                        case "By duty": DrawDutySpecificDetails(data); break;
                     }
-                    else
-                    {
-                        DrawDutyOverview(data);
-                        ImGui.Spacing();
-                        ImGui.Separator();
-                        ImGui.Spacing();
-
-                        DrawDutyTypeStatistics(data.TypeCounts);
-                        ImGui.Spacing();
-                        ImGui.Separator();
-                        ImGui.Spacing();
-
-                        DrawMostCommonDuty(data.MostCommon!);
-                        ImGui.Spacing();
-                        ImGui.Separator();
-                        ImGui.Spacing();
-
-                        DrawDutiesHeatmap(data.Heatmap);
-                        ImGui.Spacing();
-                        ImGui.Separator();
-                        ImGui.Spacing();
-
-                        DrawRecentPerformance(data);
-                        ImGui.Spacing();
-                        ImGui.Separator();
-                        ImGui.Spacing();
-
-                        DrawDutySpecificDetails(data);
-                    }
-                }
+                });
             }
-            finally
-            {
-                ImGui.EndChild();
-            }
-        }
-
-        private void DrawDutyOverview(DutyAnalysisData data)
-        {
-            DrawSectionHeading("Overview");
-            ImGui.Spacing();
-
-            if (BeginStyledTable(
-                "dutyOverview",
-                2,
-                ImGuiTableFlags.Borders |
-                ImGuiTableFlags.RowBg |
-                ImGuiTableFlags.SizingStretchProp))
-            {
-                try
-                {
-                    ImGui.TableSetupColumn("Statistic");
-                    ImGui.TableSetupColumn("Value");
-
-                    DrawStatisticRow("Completed Duties", data.CompletedDuties.ToString());
-                    DrawStatisticRow("Average Duty Length (full runs)",
-                        data.AverageFullRunTime.HasValue ? FormatDuration(data.AverageFullRunTime.Value) : "N/A");
-                    DrawStatisticRow("Average Wipes / Duty", data.AverageWipes.ToString("F2"));
-                    DrawStatisticRow("Joined In Progress", data.JoinedInProgress.ToString());
-                }
-                finally
-                {
-                    EndStyledTable();
-                }
-            }
+            finally { ImGui.EndChild(); }
         }
 
         private void DrawDutyTypeStatistics(List<DutyCount> typeCounts)
@@ -267,12 +221,16 @@ namespace MentorRouletteTracker
                 DayOfWeek.Sunday
             };
 
+            var minimumWidth = (ImGui.CalcTextSize("Early Morning").X + 20) * 7;
+            var horizontalScroll = ImGui.GetContentRegionAvail().X < minimumWidth;
             if (BeginStyledTable(
                 "dutiesHeatmap",
                 7,
                 ImGuiTableFlags.Borders |
                 ImGuiTableFlags.RowBg |
-                ImGuiTableFlags.SizingStretchProp))
+                ImGuiTableFlags.SizingStretchProp | (horizontalScroll ? ImGuiTableFlags.ScrollX : ImGuiTableFlags.None),
+                new Vector2(0, FittedTableHeight("dutiesHeatmap", days.Length, horizontalScroll)),
+                horizontalScroll ? minimumWidth : 0))
             {
                 try
                 {

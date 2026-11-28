@@ -1,0 +1,123 @@
+using Dalamud.Bindings.ImGui;
+using System.Numerics;
+
+namespace MentorRouletteTracker;
+
+public partial class MainWindow
+{
+    private sealed record DashboardCard(string Label, string Value, string? Tooltip = null);
+
+    private string DrawCategoryPage(string id, string[] categories, string? selected, Action<string> draw,
+        Func<string, string>? label = null, float bottomSpace = 0)
+    {
+        if (categories.Length == 0) return string.Empty;
+        if (!categories.Contains(selected)) selected = categories[0];
+        ImGui.PushID(id);
+        try
+        {
+            if (ImGui.GetContentRegionAvail().X >= ImGui.GetFontSize() * 45)
+            {
+                var height = Math.Max(1, ImGui.GetContentRegionAvail().Y - bottomSpace);
+                try
+                {
+                    if (ImGui.BeginChild("Categories", new Vector2(ImGui.GetFontSize() * 13, height), false))
+                    {
+                        ImGui.TextDisabled("Categories");
+                        ImGui.Separator();
+                        selected = DrawCategoryChoices(categories, selected!, compact: false, label);
+                    }
+                }
+                finally { ImGui.EndChild(); }
+                ImGui.SameLine();
+                try
+                {
+                    if (ImGui.BeginChild("CategoryContent", new Vector2(0, height), false)) draw(selected!);
+                }
+                finally { ImGui.EndChild(); }
+            }
+            else
+            {
+                selected = DrawCategoryChoices(categories, selected!, compact: true, label);
+                ImGui.Spacing();
+                ImGui.Separator();
+                ImGui.Spacing();
+                draw(selected);
+            }
+        }
+        finally { ImGui.PopID(); }
+        return selected!;
+    }
+
+    private static string DrawCategoryChoices(string[] categories, string selected, bool compact,
+        Func<string, string>? label = null)
+    {
+        var columns = Math.Clamp((int)(ImGui.GetContentRegionAvail().X / (ImGui.GetFontSize() * 13)), 1, 3);
+        if (compact && !ImGui.BeginTable("CategoryButtons", columns, ImGuiTableFlags.SizingStretchSame)) return selected;
+        try
+        {
+            foreach (var category in categories)
+            {
+                if (compact) ImGui.TableNextColumn();
+                var text = label?.Invoke(category) ?? category;
+                var width = ImGui.GetContentRegionAvail().X;
+                if (ImGui.Selectable($"{text}###Category{category}", selected == category,
+                        ImGuiSelectableFlags.None, new Vector2(0, ImGui.GetFrameHeight() + 4)))
+                    selected = category;
+                if (ImGui.IsItemHovered() && ImGui.CalcTextSize(text).X > width)
+                    ImGui.SetTooltip(text);
+            }
+        }
+        finally { if (compact) ImGui.EndTable(); }
+        return selected;
+    }
+
+    private static bool DrawDashboardCards(string id, IReadOnlyList<DashboardCard> cards)
+    {
+        if (cards.Count == 0) return false;
+        var columns = Math.Clamp((int)(ImGui.GetContentRegionAvail().X / (ImGui.GetFontSize() * 12)), 1, cards.Count);
+        var height = ImGui.GetTextLineHeightWithSpacing() * 3.5f + 16;
+        ImGui.PushID(id);
+        ImGui.PushStyleVar(ImGuiStyleVar.CellPadding, new Vector2(4, 4));
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(10, 8));
+        ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, 4f);
+        try
+        {
+            if (!ImGui.BeginTable("OverviewCards", columns, ImGuiTableFlags.SizingStretchSame)) return false;
+            try
+            {
+                foreach (var card in cards)
+                {
+                    ImGui.TableNextColumn();
+                    try
+                    {
+                        if (ImGui.BeginChild("Card##" + card.Label, new Vector2(0, height), true,
+                                ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse))
+                        {
+                            ImGui.TextDisabled(card.Label);
+                            ImGui.Spacing();
+                            ImGui.SetWindowFontScale(1.25f);
+                            try { DrawDashboardText(card.Value); }
+                            finally { ImGui.SetWindowFontScale(1f); }
+                        }
+                    }
+                    finally { ImGui.EndChild(); }
+                    if (card.Tooltip != null && ImGui.IsItemHovered()) ImGui.SetTooltip(card.Tooltip);
+                }
+            }
+            finally { ImGui.EndTable(); }
+        }
+        finally
+        {
+            ImGui.PopStyleVar(3);
+            ImGui.PopID();
+        }
+        return true;
+    }
+
+    private static void DrawDashboardText(string text)
+    {
+        ImGui.PushTextWrapPos();
+        try { ImGui.TextUnformatted(text); }
+        finally { ImGui.PopTextWrapPos(); }
+    }
+}

@@ -5,7 +5,6 @@ namespace MentorRouletteTracker
 {
     public partial class MainWindow
     {
-        private bool? settingsExpansion;
         private bool? milestoneExpansion;
         private bool openResetSettingsConfirmation;
         private bool appearanceSettingsDirty;
@@ -32,237 +31,164 @@ namespace MentorRouletteTracker
             }
         }
 
+        private string? settingsCategory;
+        private static readonly string[] SettingsCategories =
+        [
+            "Duty recording", "Player tracking", "Duty timer", "Privacy", "Appearance",
+            "Table columns", "Milestones", "History & exports", "Help"
+        ];
+
+        private static readonly (uint Id, string Name)[] SettingsContentTypes = new (uint Id, string Name)[]
+        {
+            (2, "Dungeons"),
+            (3, "Guildhests"),
+            (4, "Trials"),
+            (5, "Raids"),
+            (6, "PvP"),
+            (21, "Deep Dungeons"),
+            (28, "Ultimate Raids"),
+            (30, "V&C Dungeon"),
+            (37, "Chaotic Alliance Raid")
+        };
+
         private void DrawSettingsContent()
         {
-            if (ImGui.SmallButton("Collapse all##Settings"))
+            var footerHeight = ImGui.GetFrameHeightWithSpacing() + ImGui.GetStyle().ItemSpacing.Y * 3 + 2;
+            settingsCategory = DrawCategoryPage("Settings", SettingsCategories, settingsCategory, title =>
             {
-                settingsExpansion = false;
-                milestoneExpansion = false;
-                ImGui.GetStateStorage().SetInt(ImGui.GetID("Custom colors"), 0);
-            }
-            ImGui.SameLine();
-            if (ImGui.SmallButton("Expand all##Settings"))
-            {
-                settingsExpansion = true;
-                milestoneExpansion = true;
-            }
-            ImGui.Spacing();
-
-            var contentTypes = new (uint Id, string Name)[]
-            {
-                (2, "Dungeons"),
-                (3, "Guildhests"),
-                (4, "Trials"),
-                (5, "Raids"),
-                (6, "PvP"),
-                (21, "Deep Dungeons"),
-                (28, "Ultimate Raids"),
-                (30, "V&C Dungeon"),
-                (37, "Chaotic Alliance Raid")
-            };
-
-            if (BeginSettingsSection("Duty recording", defaultOpen: true))
-            {
-                try
+                DrawSectionHeading(title);
+                ImGui.Spacing();
+                switch (title)
                 {
-                    var armed = tracker.Armed;
-
-                    if (ImGui.Checkbox("Record duties", ref armed))
-                    {
-                        tracker.Armed = armed;
-                    }
-
-                    ImGui.PushTextWrapPos();
-                    try
-                    {
-                        ImGui.TextDisabled(
-                            "On by default and stays on until you turn it off. Your choice is saved when you reload or restart.");
-                    }
-                    finally
-                    {
-                        ImGui.PopTextWrapPos();
-                    }
-
-                    ImGui.Spacing();
-                    var recordNpcDuties = config.RecordNpcDuties;
-                    if (DrawSettingsCheckbox("Record Trust and Duty Support runs", ref recordNpcDuties))
-                    {
-                        config.RecordNpcDuties = recordNpcDuties;
-                        config.Save();
-                    }
-                    ImGui.Spacing();
-                    DrawSettingsGroupHeading("Duty types");
-                    ImGui.Spacing();
-                    DrawDutyTypeOptions(contentTypes, timer: false);
-                    ImGui.Spacing();
-                    DrawSettingsGroupHeading("PvP");
-                    DrawPvpStatsStatus();
-                    var enemyTrackingDisabled = BeginPvpControl();
-                    try
-                    {
-                        var trackEnemies = config.TrackPvpEnemies;
-                        if (DrawSettingsCheckbox("Track opposing members in PvP matches", ref trackEnemies))
-                        {
-                            config.TrackPvpEnemies = trackEnemies;
-                            config.Save();
-                        }
-                    }
-                    finally
-                    {
-                        EndPvpControl(enemyTrackingDisabled);
-                    }
-                    ImGui.TextDisabled("New matches only.");
+                    case "Duty recording": DrawDutyRecordingSettings(); break;
+                    case "Player tracking": DrawPlayerTrackingSettings(); break;
+                    case "Duty timer": DrawDutyTimerSettings(); break;
+                    case "Privacy": DrawPrivacySettings(); break;
+                    case "Appearance": DrawAppearanceSettings(); break;
+                    case "Table columns": DrawTableColumnSettings(); break;
+                    case "Milestones": DrawMilestoneCustomization(); break;
+                    case "History & exports": DrawHistorySettings(); break;
+                    case "Help": DrawHelpSettings(); break;
                 }
-                finally
-                {
-                    EndSettingsSection();
-                }
-            }
-
-            ImGui.Spacing();
-            if (BeginSettingsSection("Player tracking", defaultOpen: true))
-            {
-                try
-                {
-                    bool includeSelf = config.IncludeSelfInStatistics;
-
-                    if (DrawSettingsCheckbox(
-                        "Include yourself in statistics",
-                        ref includeSelf))
-                    {
-                        config.IncludeSelfInStatistics = includeSelf;
-                        config.Save();
-                    }
-                    if (ImGui.IsItemHovered())
-                        ImGui.SetTooltip("Your data is still recorded when this is off. It just won't be included in statistics.");
-
-                    bool trackAlliance = config.TrackAllianceMembers;
-
-                    if (ImGui.Checkbox(
-                        "Track alliance members",
-                        ref trackAlliance))
-                    {
-                        config.TrackAllianceMembers = trackAlliance;
-                        config.Save();
-                    }
-
-                    ImGui.Spacing();
-                    var raceDisplay = config.UseMostRecentPlayerRace ? 1 : 0;
-                    ImGui.TextUnformatted("Race shown in People");
-                    ImGui.SetNextItemWidth(Math.Min(ImGui.GetContentRegionAvail().X, ImGui.GetFontSize() * 18));
-                    if (ImGui.Combo("##PeopleRaceDisplay", ref raceDisplay,
-                            ["Most observed", "Most recently seen"], 2))
-                    {
-                        config.UseMostRecentPlayerRace = raceDisplay == 1;
-                        config.Save();
-                    }
-                    if (ImGui.IsItemHovered())
-                        ImGui.SetTooltip("Uses the encounters matching your filters. Unknown races are skipped. Ties for most observed use the most recent race.");
-                    ImGui.Spacing();
-                    DrawSettingsGroupHeading("Encounter target");
-                    DrawEncounterTargetSettings();
-                }
-                finally
-                {
-                    EndSettingsSection();
-                }
-            }
-
-            ImGui.Spacing();
-            if (BeginSettingsSection("Duty timer"))
-            {
-                try
-                {
-                    ImGui.TextDisabled("Choose which duties show the timer.");
-                    ImGui.Spacing();
-                    DrawDutyTypeOptions(contentTypes, timer: true);
-                }
-                finally
-                {
-                    EndSettingsSection();
-                }
-            }
-
-            ImGui.Spacing();
-            if (BeginSettingsSection("Privacy"))
-            {
-                try { DrawPrivacySettings(); }
-                finally { EndSettingsSection(); }
-            }
-            ImGui.Spacing();
-            if (BeginSettingsSection("Appearance"))
-            {
-                try
-                {
-                    DrawAppearanceSettings();
-                }
-                finally
-                {
-                    EndSettingsSection();
-                }
-            }
-
-            ImGui.Spacing();
-            if (BeginSettingsSection("Table columns"))
-            {
-                try
-                {
-                    DrawTableColumnSettings();
-                }
-                finally
-                {
-                    EndSettingsSection();
-                }
-            }
-
-            ImGui.Spacing();
-            if (BeginSettingsSection("Milestones"))
-            {
-                try
-                {
-                    DrawMilestoneCustomization();
-                }
-                finally
-                {
-                    EndSettingsSection();
-                }
-            }
-
-            ImGui.Spacing();
-            if (BeginSettingsSection("History & exports"))
-            {
-                try
-                {
-                    DrawHistorySettings();
-                }
-                finally
-                {
-                    EndSettingsSection();
-                }
-            }
-
-            ImGui.Spacing();
-            if (BeginSettingsSection("Help"))
-            {
-                try
-                {
-                    if (ImGui.Button("Show introduction"))
-                        showIntroduction = true;
-                    if (ImGui.Button("Open Noumenon repository"))
-                        Dalamud.Utility.Util.OpenLink("https://github.com/AdalithCode/Noumenon");
-                    if (ImGui.Button("Report an issue"))
-                        Dalamud.Utility.Util.OpenLink("https://github.com/AdalithCode/Noumenon/issues");
-                    ImGui.TextWrapped("Found a bug or have an idea? Post it in the repository's Issues tab. For bugs, include what happened and how to reproduce it if you can.");
-                }
-                finally { EndSettingsSection(); }
-            }
-
+            }, bottomSpace: footerHeight);
             ImGui.Spacing();
             ImGui.Separator();
             ImGui.Spacing();
-            if (ImGui.Button("Reset all settings"))
-                openResetSettingsConfirmation = true;
-            settingsExpansion = null;
+            if (ImGui.Button("Reset all settings")) openResetSettingsConfirmation = true;
+        }
+
+        private void DrawDutyRecordingSettings()
+        {
+            var armed = tracker.Armed;
+
+            if (ImGui.Checkbox("Record duties", ref armed))
+            {
+                tracker.Armed = armed;
+            }
+
+            ImGui.PushTextWrapPos();
+            try
+            {
+                ImGui.TextDisabled(
+                    "On by default and stays on until you turn it off. Your choice is saved when you reload or restart.");
+            }
+            finally
+            {
+                ImGui.PopTextWrapPos();
+            }
+
+            ImGui.Spacing();
+            var recordNpcDuties = config.RecordNpcDuties;
+            if (DrawSettingsCheckbox("Record Trust and Duty Support runs", ref recordNpcDuties))
+            {
+                config.RecordNpcDuties = recordNpcDuties;
+                config.Save();
+            }
+            ImGui.Spacing();
+            DrawSettingsGroupHeading("Duty types");
+            ImGui.Spacing();
+            DrawDutyTypeOptions(SettingsContentTypes, timer: false);
+            ImGui.Spacing();
+            DrawSettingsGroupHeading("PvP");
+            DrawPvpStatsStatus();
+            var enemyTrackingDisabled = BeginPvpControl();
+            try
+            {
+                var trackEnemies = config.TrackPvpEnemies;
+                if (DrawSettingsCheckbox("Track opposing members in PvP matches", ref trackEnemies))
+                {
+                    config.TrackPvpEnemies = trackEnemies;
+                    config.Save();
+                }
+            }
+            finally
+            {
+                EndPvpControl(enemyTrackingDisabled);
+            }
+            ImGui.TextDisabled("New matches only.");
+
+        }
+
+        private void DrawPlayerTrackingSettings()
+        {
+            bool includeSelf = config.IncludeSelfInStatistics;
+
+            if (DrawSettingsCheckbox(
+                "Include yourself in statistics",
+                ref includeSelf))
+            {
+                config.IncludeSelfInStatistics = includeSelf;
+                config.Save();
+            }
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("Your data is still recorded when this is off. It just won't be included in statistics.");
+
+            bool trackAlliance = config.TrackAllianceMembers;
+
+            if (ImGui.Checkbox(
+                "Track alliance members",
+                ref trackAlliance))
+            {
+                config.TrackAllianceMembers = trackAlliance;
+                config.Save();
+            }
+
+            ImGui.Spacing();
+            var raceDisplay = config.UseMostRecentPlayerRace ? 1 : 0;
+            ImGui.TextUnformatted("Race shown in People");
+            ImGui.SetNextItemWidth(Math.Min(ImGui.GetContentRegionAvail().X, ImGui.GetFontSize() * 18));
+            if (ImGui.Combo("##PeopleRaceDisplay", ref raceDisplay,
+                    ["Most observed", "Most recently seen"], 2))
+            {
+                config.UseMostRecentPlayerRace = raceDisplay == 1;
+                config.Save();
+            }
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("Uses the encounters matching your filters. Unknown races are skipped. Ties for most observed use the most recent race.");
+            ImGui.Spacing();
+            DrawSettingsGroupHeading("Encounter target");
+            DrawEncounterTargetSettings();
+
+        }
+
+        private void DrawDutyTimerSettings()
+        {
+            ImGui.TextDisabled("Choose which duties show the timer.");
+            ImGui.Spacing();
+            DrawDutyTypeOptions(SettingsContentTypes, timer: true);
+
+        }
+
+        private void DrawHelpSettings()
+        {
+            if (ImGui.Button("Show introduction"))
+                showIntroduction = true;
+            if (ImGui.Button("Open Noumenon repository"))
+                Dalamud.Utility.Util.OpenLink("https://github.com/AdalithCode/Noumenon");
+            if (ImGui.Button("Report an issue"))
+                Dalamud.Utility.Util.OpenLink("https://github.com/AdalithCode/Noumenon/issues");
+            ImGui.TextWrapped("Found a bug or have an idea? Post it in the repository's Issues tab. For bugs, include what happened and how to reproduce it if you can.");
+
         }
 
         private bool BeginPvpControl(bool isPvp = true)
@@ -366,7 +292,7 @@ namespace MentorRouletteTracker
             ClearFilters();
             filtersExpanded = false;
             selectedHeatmapMetric = 0;
-            settingsExpansion = false;
+            settingsCategory = null;
             milestoneExpansion = false;
         }
 
@@ -504,47 +430,11 @@ namespace MentorRouletteTracker
             ImGui.Spacing();
         }
 
-        private bool BeginSettingsSection(string title, bool defaultOpen = false)
-        {
-            if (settingsExpansion.HasValue)
-                ImGui.SetNextItemOpen(settingsExpansion.Value, ImGuiCond.Always);
-            var flags = defaultOpen ? ImGuiTreeNodeFlags.DefaultOpen : ImGuiTreeNodeFlags.None;
-            if (!DrawDropdownHeader(title, flags)) return false;
-            BeginSettingsOutline(indent: true);
-            return true;
-        }
-
-        private static bool DrawDropdownHeader(string title, ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags.None)
-        {
-            ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(8, 4));
-            ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, 4f);
-            var colors = ImGui.GetStyle().Colors;
-            ImGui.PushStyleColor(ImGuiCol.Header, Vector4.Lerp(colors[(int)ImGuiCol.Header], colors[(int)ImGuiCol.HeaderHovered], 0.5f));
-            try { return ImGui.CollapsingHeader(title, flags); }
-            finally
-            {
-                ImGui.PopStyleColor();
-                ImGui.PopStyleVar(2);
-            }
-        }
-
-        private void EndSettingsSection()
-        {
-            EndSettingsOutline();
-            ImGui.Spacing();
-            ImGui.Unindent(12);
-        }
-
-        private void BeginSettingsOutline(bool indent = false)
+        private void BeginSettingsOutline()
         {
             var min = ImGui.GetItemRectMin();
             var max = ImGui.GetItemRectMax();
             settingsSectionBounds.Push(new Vector4(min.X, min.Y, max.X, max.Y));
-            if (indent)
-            {
-                ImGui.Indent(12);
-                ImGui.Spacing();
-            }
             ImGui.BeginGroup();
         }
 
@@ -631,8 +521,6 @@ namespace MentorRouletteTracker
         private void DrawAppearanceSettings()
         {
             DrawThemeSettings();
-            if (settingsExpansion.HasValue)
-                ImGui.SetNextItemOpen(settingsExpansion.Value, ImGuiCond.Always);
             if (!ImGui.TreeNodeEx("Custom colors", ImGuiTreeNodeFlags.SpanAvailWidth)) return;
             BeginSettingsOutline();
             try { DrawCustomColorSettings(); }
@@ -781,6 +669,10 @@ namespace MentorRouletteTracker
 
         private void DrawMilestoneCustomization()
         {
+            if (ImGui.SmallButton("Collapse groups")) milestoneExpansion = false;
+            ImGui.SameLine();
+            if (ImGui.SmallButton("Expand groups")) milestoneExpansion = true;
+            ImGui.Spacing();
             config.HiddenMilestones ??= new();
             RefreshMilestonesIfNeeded(objectTable.LocalPlayer?.Name.TextValue);
 

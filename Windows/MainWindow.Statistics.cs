@@ -7,110 +7,60 @@ namespace MentorRouletteTracker
 {
     public partial class MainWindow
     {
+        private string? statisticsCategory;
+        private static readonly string[] StatisticsCategories =
+            ["Overview", "Race", "Gender", "Job", "Status", "Home world", "Datacenter"];
+
         private void DrawStatisticsTab()
         {
             var data = GetPlayerViewData();
-            var records = data.Records;
-
             try
             {
-                if (ImGui.BeginChild(
-                    "StatisticsContent",
-                    Vector2.Zero,
-                    false,
-                    ImGuiWindowFlags.HorizontalScrollbar))
+                if (!ImGui.BeginChild("StatisticsContent", Vector2.Zero, false)) return;
+                if (data.Records.Count == 0)
                 {
-                    ImGui.Text("Player stats");
-                    ImGui.PushTextWrapPos();
-                    try
-                    {
-                        ImGui.TextDisabled("Completed duties matching the filters. '-' means unknown.");
-                    }
-                    finally
-                    {
-                        ImGui.PopTextWrapPos();
-                    }
-                    ImGui.Separator();
-                    ImGui.Spacing();
-
-                    if (records.Count == 0)
-                    {
-                        ImGui.TextDisabled("No completed duties with these filters.");
-                        return;
-                    }
-
-                    var anyVisible = false;
-                    void Section(Action draw)
-                    {
-                        if (anyVisible)
-                        {
-                            ImGui.Spacing();
-                            ImGui.Separator();
-                            ImGui.Spacing();
-                        }
-                        draw();
-                        anyVisible = true;
-                    }
-
-                    Section(() => DrawSelectedPlayerStatistics(data));
-                    Section(() => DrawRaceStatistics(data));
-                    Section(() => DrawPlayerStatisticTable(data, PlayerStatistic.Gender));
-                    Section(() => DrawPlayerStatisticTable(data, PlayerStatistic.Job));
-                    Section(() => DrawPlayerStatisticTable(data, PlayerStatistic.Status));
-                    Section(() => DrawPlayerStatisticTable(data, PlayerStatistic.World));
-                    Section(() => DrawPlayerStatisticTable(data, PlayerStatistic.Datacenter));
-
+                    ImGui.TextWrapped("No completed duties with these filters.");
+                    return;
                 }
+                var overview = data.Overview;
+                DrawDashboardCards("Statistics",
+                [
+                    new("Unique players", overview.UniquePlayers.ToString()),
+                    new("Encounters", overview.TotalEncounters.ToString()),
+                    new("Matching duties", overview.DutiesWithPlayers.ToString()),
+                    new("Current drought", $"{overview.CurrentDrought} duties", $"Duties since the last {EncounterTargetLabel} encounter, using your filters.")
+                ]);
+                ImGui.Spacing();
+                statisticsCategory = DrawCategoryPage("Statistics", StatisticsCategories, statisticsCategory, title =>
+                {
+                    switch (title)
+                    {
+                        case "Overview": DrawPlayerDroughtStatistics(data); break;
+                        case "Race": DrawRaceStatistics(data); break;
+                        case "Gender": DrawPlayerStatisticTable(data, PlayerStatistic.Gender); break;
+                        case "Job": DrawPlayerStatisticTable(data, PlayerStatistic.Job); break;
+                        case "Status": DrawPlayerStatisticTable(data, PlayerStatistic.Status); break;
+                        case "Home world": DrawPlayerStatisticTable(data, PlayerStatistic.World); break;
+                        case "Datacenter": DrawPlayerStatisticTable(data, PlayerStatistic.Datacenter); break;
+                    }
+                });
             }
-            finally
-            {
-                ImGui.EndChild();
-            }
+            finally { ImGui.EndChild(); }
         }
 
-        private void DrawSelectedPlayerStatistics(PlayerViewData data)
+        private void DrawPlayerDroughtStatistics(PlayerViewData data)
         {
-            DrawSectionHeading("Players in these duties");
+            DrawSectionHeading("Encounter target");
             ImGui.Spacing();
-            var overview = data.Overview;
-
-            if (BeginStyledTable(
-                "lalaStats",
-                2,
-                ImGuiTableFlags.Borders |
-                ImGuiTableFlags.RowBg |
-                ImGuiTableFlags.SizingStretchProp))
+            if (!BeginStyledTable("PlayerDroughtDetails", 2, ImGuiTableFlags.RowBg | ImGuiTableFlags.SizingStretchProp)) return;
+            try
             {
-                try
-                {
-                    ImGui.TableSetupColumn("Statistic");
-                    ImGui.TableSetupColumn("Value");
-
-                    DrawStatisticRow(
-                        "Unique Players Seen",
-                        overview.UniquePlayers.ToString());
-
-                    DrawStatisticRow(
-                        "Total Encounters",
-                        overview.TotalEncounters.ToString());
-
-                    DrawStatisticRow(
-                        "Duties With Matching Players",
-                        overview.DutiesWithPlayers.ToString());
-
-                    DrawStatisticRow(
-                        $"Duties since last {EncounterTargetLabel} encounter",
-                        overview.CurrentDrought.ToString());
-
-                    DrawStatisticRow(
-                        $"Longest {EncounterTargetLabel} drought",
-                        $"{overview.LongestDrought} duties");
-                }
-                finally
-                {
-                    EndStyledTable();
-                }
+                ImGui.TableSetupColumn("Statistic");
+                ImGui.TableSetupColumn("Value");
+                DrawStatisticRow("Encounter target", EncounterTargetLabel);
+                DrawStatisticRow("Longest drought", $"{data.Overview.LongestDrought} duties");
             }
+            finally { EndStyledTable(); }
         }
 
         private static int? EffectiveDeaths(

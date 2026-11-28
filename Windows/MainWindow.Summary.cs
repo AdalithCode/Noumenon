@@ -85,35 +85,8 @@ namespace MentorRouletteTracker
                 if (!categories.Any(section => section.Title == summaryCategory))
                     summaryCategory = categories[0].Title;
                 ImGui.Spacing();
-                var wide = ImGui.GetContentRegionAvail().X >= ImGui.GetFontSize() * 45;
-                if (wide)
-                {
-                    try
-                    {
-                        if (ImGui.BeginChild("SummaryCategories", new Vector2(ImGui.GetFontSize() * 13, 0), false))
-                        {
-                            ImGui.TextDisabled("Categories");
-                            ImGui.Separator();
-                            DrawSummaryCategories(categories, compact: false);
-                        }
-                    }
-                    finally { ImGui.EndChild(); }
-                    ImGui.SameLine();
-                    try
-                    {
-                        if (ImGui.BeginChild("SummaryRecords", Vector2.Zero, false))
-                            DrawSummaryCategory(categories.First(section => section.Title == summaryCategory));
-                    }
-                    finally { ImGui.EndChild(); }
-                }
-                else
-                {
-                    DrawSummaryCategories(categories, compact: true);
-                    ImGui.Spacing();
-                    ImGui.Separator();
-                    ImGui.Spacing();
-                    DrawSummaryCategory(categories.First(section => section.Title == summaryCategory));
-                }
+                summaryCategory = DrawCategoryPage("Summary", categories.Select(section => section.Title).ToArray(), summaryCategory,
+                    title => DrawSummaryCategory(categories.First(section => section.Title == title)), SummaryCategoryLabel);
             }
             finally { ImGui.EndChild(); }
         }
@@ -127,38 +100,7 @@ namespace MentorRouletteTracker
                 .Where(card => card.Value != null && !config.HiddenMilestones.Contains(MilestoneKey("Overall stats", card.Milestone)))
                 .ToList();
             if (cards.Count == 0) return false;
-            var columns = Math.Clamp((int)(ImGui.GetContentRegionAvail().X / (ImGui.GetFontSize() * 12)), 1, cards.Count);
-            var height = ImGui.GetTextLineHeightWithSpacing() * 3.5f + 16;
-            ImGui.PushStyleVar(ImGuiStyleVar.CellPadding, new Vector2(4, 4));
-            ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(10, 8));
-            ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, 4f);
-            try
-            {
-                if (!ImGui.BeginTable("SummaryOverviewCards", columns, ImGuiTableFlags.SizingStretchSame)) return false;
-                try
-                {
-                    foreach (var card in cards)
-                    {
-                        ImGui.TableNextColumn();
-                        try
-                        {
-                            if (ImGui.BeginChild("SummaryCard##" + card.Milestone, new Vector2(0, height), true,
-                                    ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse))
-                            {
-                                ImGui.TextDisabled(card.Label);
-                                ImGui.Spacing();
-                                ImGui.SetWindowFontScale(1.25f);
-                                try { DrawSummaryText(card.Value.Text); }
-                                finally { ImGui.SetWindowFontScale(1f); }
-                            }
-                        }
-                        finally { ImGui.EndChild(); }
-                    }
-                }
-                finally { ImGui.EndTable(); }
-            }
-            finally { ImGui.PopStyleVar(3); }
-            return true;
+            return DrawDashboardCards("Summary", cards.Select(card => new DashboardCard(card.Label, card.Value.Text)).ToList());
         }
 
         private static string SummaryCategoryLabel(string title) => title switch
@@ -172,23 +114,6 @@ namespace MentorRouletteTracker
             "Activity Records" => "Activity records",
             _ => title
         };
-
-        private void DrawSummaryCategories(List<SummaryCategoryView> categories, bool compact)
-        {
-            var columns = Math.Clamp((int)(ImGui.GetContentRegionAvail().X / (ImGui.GetFontSize() * 13)), 1, 3);
-            if (compact && !ImGui.BeginTable("SummaryCategoryButtons", columns, ImGuiTableFlags.SizingStretchSame)) return;
-            try
-            {
-                foreach (var section in categories)
-                {
-                    if (compact) ImGui.TableNextColumn();
-                    if (ImGui.Selectable($"{SummaryCategoryLabel(section.Title)}###Category{section.Title}",
-                            summaryCategory == section.Title, ImGuiSelectableFlags.None, new Vector2(0, ImGui.GetFrameHeight() + 4)))
-                        summaryCategory = section.Title;
-                }
-            }
-            finally { if (compact) ImGui.EndTable(); }
-        }
 
         private void DrawSummaryCategory(SummaryCategoryView section)
         {
@@ -208,11 +133,11 @@ namespace MentorRouletteTracker
                 {
                     ImGui.TableNextRow();
                     ImGui.TableSetColumnIndex(0);
-                    DrawSummaryText(EncounterMilestoneLabel(row.Label));
+                    DrawDashboardText(EncounterMilestoneLabel(row.Label));
                     ImGui.TableSetColumnIndex(1);
                     if (row.Value.Record is not DutyRecord record)
                     {
-                        DrawSummaryText(row.Value.Text);
+                        DrawDashboardText(row.Value.Text);
                         continue;
                     }
                     ImGui.PushID(row.Label);
@@ -228,7 +153,7 @@ namespace MentorRouletteTracker
                         var hovered = ImGui.IsItemHovered();
                         var end = ImGui.GetCursorPos();
                         ImGui.SetCursorPos(start);
-                        DrawSummaryText(row.Value.Text);
+                        DrawDashboardText(row.Value.Text);
                         ImGui.SetCursorPos(end);
                         if (hovered) ImGui.SetTooltip("View duty details");
                     }
@@ -236,13 +161,6 @@ namespace MentorRouletteTracker
                 }
             }
             finally { EndStyledTable(); }
-        }
-
-        private static void DrawSummaryText(string text)
-        {
-            ImGui.PushTextWrapPos();
-            try { ImGui.TextUnformatted(text); }
-            finally { ImGui.PopTextWrapPos(); }
         }
 
         private static string MilestoneTitle(string title) => title == "PvP player stats" ? "Your lifetime PvP stats" : title;

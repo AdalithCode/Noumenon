@@ -35,6 +35,9 @@ and `/nom arm`.
   history. Choose their most observed or most recently seen race in Settings.
 - **Summary:** milestones, streaks, and your lifetime PvP totals and personal bests.
 
+Statistics, Duty Analysis, Summary, and Settings show one category at a time.
+Pick one on the left; in smaller windows, the category buttons move to the top.
+
 Use the filters to narrow what's shown. Recent performance compares completed
 runs entered from the start, using those same filters. Overall includes the recent
 runs too, and unknown death counts are excluded from the death average.
