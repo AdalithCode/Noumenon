@@ -56,7 +56,7 @@ namespace MentorRouletteTracker
             var footerHeight = ImGui.GetFrameHeightWithSpacing() + ImGui.GetStyle().ItemSpacing.Y * 3 + 2;
             settingsCategory = DrawCategoryPage("Settings", SettingsCategories, settingsCategory, title =>
             {
-                DrawSectionHeading(title);
+                DrawSectionHeading(CategoryDisplayLabel(title));
                 ImGui.Spacing();
                 switch (title)
                 {
@@ -449,7 +449,7 @@ namespace MentorRouletteTracker
 
         private static void DrawSettingsGroupHeading(string title)
         {
-            DrawSectionHeading(title);
+            DrawSectionHeading(CategoryDisplayLabel(title));
             ImGui.Separator();
             ImGui.Spacing();
         }

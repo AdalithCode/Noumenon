@@ -18,17 +18,23 @@ public partial class MainWindow
             if (ImGui.GetContentRegionAvail().X >= ImGui.GetFontSize() * 45)
             {
                 var height = Math.Max(1, ImGui.GetContentRegionAvail().Y - bottomSpace);
+                ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(10, 10));
+                ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, 4f);
                 try
                 {
-                    if (ImGui.BeginChild("Categories", new Vector2(ImGui.GetFontSize() * 13, height), false))
+                    if (ImGui.BeginChild("Categories", new Vector2(ImGui.GetFontSize() * 12, height), true))
                     {
                         ImGui.TextDisabled("Categories");
-                        ImGui.Separator();
+                        ImGui.Spacing();
                         selected = DrawCategoryChoices(categories, selected!, compact: false, label);
                     }
                 }
-                finally { ImGui.EndChild(); }
-                ImGui.SameLine();
+                finally
+                {
+                    ImGui.EndChild();
+                    ImGui.PopStyleVar(2);
+                }
+                ImGui.SameLine(0, ImGui.GetStyle().ItemSpacing.X * 2);
                 try
                 {
                     if (ImGui.BeginChild("CategoryContent", new Vector2(0, height), false)) draw(selected!);
@@ -48,26 +54,57 @@ public partial class MainWindow
         return selected!;
     }
 
+    private static string CategoryDisplayLabel(string text) => text switch
+    {
+        "Home world" => "Home World",
+        "Duty types" => "Duty Types",
+        "By duty" => "By Duty",
+        "Duty recording" => "Duty Recording",
+        "Player tracking" => "Player Tracking",
+        "Duty timer" => "Duty Timer",
+        "Table columns" => "Table Columns",
+        "History & exports" => "History & Exports",
+        "PvP results" => "PvP Results",
+        "Duty records" => "Duty Records",
+        "Player records" => "Player Records",
+        "Streaks & droughts" => "Streaks & Droughts",
+        "Activity records" => "Activity Records",
+        _ => text
+    };
+
     private static string DrawCategoryChoices(string[] categories, string selected, bool compact,
         Func<string, string>? label = null)
     {
         var columns = Math.Clamp((int)(ImGui.GetContentRegionAvail().X / (ImGui.GetFontSize() * 13)), 1, 3);
         if (compact && !ImGui.BeginTable("CategoryButtons", columns, ImGuiTableFlags.SizingStretchSame)) return selected;
+        ImGui.PushStyleVar(ImGuiStyleVar.SelectableTextAlign, new Vector2(0.06f, 0.5f));
         try
         {
             foreach (var category in categories)
             {
                 if (compact) ImGui.TableNextColumn();
-                var text = label?.Invoke(category) ?? category;
+                var text = CategoryDisplayLabel(label?.Invoke(category) ?? category);
                 var width = ImGui.GetContentRegionAvail().X;
                 if (ImGui.Selectable($"{text}###Category{category}", selected == category,
                         ImGuiSelectableFlags.None, new Vector2(0, ImGui.GetFrameHeight() + 4)))
                     selected = category;
-                if (ImGui.IsItemHovered() && ImGui.CalcTextSize(text).X > width)
+                if (selected == category)
+                {
+                    var start = ImGui.GetItemRectMin();
+                    var end = ImGui.GetItemRectMax();
+                    ImGui.GetWindowDrawList().AddRectFilled(
+                        new Vector2(start.X, start.Y + 4), new Vector2(start.X + 3, end.Y - 4),
+                        ImGui.ColorConvertFloat4ToU32(WindowAppearance.Accent), 1f);
+                }
+                if (ImGui.IsItemHovered() && ImGui.CalcTextSize(text).X > width * 0.88f)
                     ImGui.SetTooltip(text);
             }
         }
-        finally { if (compact) ImGui.EndTable(); }
+        finally
+        {
+            ImGui.PopStyleVar();
+            if (compact) ImGui.EndTable();
+        }
         return selected;
     }
 
